@@ -4,8 +4,7 @@ This is a lightweight application that leverages Shizuku privileges to execute a
 It enables dual app installation directly through the shell interface, providing a streamlined way to manage multiple instances of the same app.
 ## Features
 - Utilizes Shizuku for elevated permissions.
-- Supports dual installation via adb shell commands.
-- Currently limited to user 999.
+- Supports dual app management with several clicks.
 ## Requirements
 - Shizuku service must be running.
 - Android device with support for multiple users.

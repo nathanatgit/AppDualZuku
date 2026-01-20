@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name" translatable="false">AppDualZuku</string>
+    <string name="app_name_version" translatable="false">AppDualZuku v1.0</string>
+    <string name="main_only">Main only</string>
+    <string name="search_apps">Search apps...</string>
+    <string name="settings_about">About</string>
+    <string name="about_AppDualZuku">Manage dual apps using Shizuku</string>
+    <string name="coming_soon">More settings coming soon...</string>
+    <string name="install_to_dual_space_user_999">Install to Dual Space (User 999)</string>
+    <string name="remove_from_dual_space">Remove from Dual Space</string>
+    <string name="cancel">Cancel</string>
+    <string name="processing">Processing...</string>
+    <string name="all_apps">All Apps</string>
+    <string name="user_apps">User Apps</string>
+    <string name="system_apps">System Apps</string>
+    <string name="settings">Settings</string>
+    <string name="shi_not_run">Shizuku not running!</string>
+    <string name="launch_app_dual">Launch App (Dual)</string>
+    <string name="launch_app">Launch App</string>
+    <string name="open_app_info_dual">Open App info (Dual)</string>
+    <string name="open_app_info_main">Open App info (Main)</string>
+</resources>

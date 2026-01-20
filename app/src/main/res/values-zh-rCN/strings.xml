@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="main_only">主空间</string>
+    <string name="search_apps">搜索应用</string>
+    <string name="settings_about">关于</string>
+    <string name="about_AppDualZuku">使用Shizuku管理双开应用</string>
+    <string name="coming_soon">更多功能敬请期待……</string>
+    <string name="install_to_dual_space_user_999">双开应用（安装至用户999）</string>
+    <string name="remove_from_dual_space">移除双开应用</string>
+    <string name="cancel">取消</string>
+    <string name="processing">正在处理</string>
+    <string name="all_apps">所有应用</string>
+    <string name="user_apps">用户应用</string>
+    <string name="system_apps">系统应用</string>
+    <string name="settings">设置</string>
+    <string name="shi_not_run">Shizuku未运行！</string>
+    <string name="launch_app_dual">启动双开应用</string>
+    <string name="launch_app">启动应用</string>
+    <string name="open_app_info_dual">打开双开应用详情</string>
+    <string name="open_app_info_main">打开应用详情</string>
+</resources>

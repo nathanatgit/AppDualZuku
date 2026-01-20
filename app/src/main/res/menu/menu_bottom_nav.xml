@@ -1,0 +1,24 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- All Apps -->
+    <item
+        android:id="@+id/nav_all"
+        android:icon="@drawable/ic_apps"
+        android:title="@string/all_apps" />
+
+    <item
+        android:id="@+id/nav_user"
+        android:icon="@drawable/ic_person"
+        android:title="@string/user_apps" />
+
+    <item
+        android:id="@+id/nav_system"
+        android:icon="@drawable/ic_system"
+        android:title="@string/system_apps" />
+
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/settings" />
+
+</menu>

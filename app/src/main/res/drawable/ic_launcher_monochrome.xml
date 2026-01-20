@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Cat silhouette (simplified: head+ears + body + tail) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="
+            M35,28
+            L43,18
+            Q54,12 65,18
+            L73,28
+            Q76,30 76,34
+            Q76,40 70,42
+            Q84,55 76,76
+            Q70,92 52,94
+            Q34,92 30,76
+            Q27,62 36,49
+            Q26,48 26,40
+            Q26,31 35,28
+            Z
+
+            M22,40
+            Q14,50 18,62
+            Q20,68 25,72
+            Q21,74 18,73
+            Q10,70 10,60
+            Q10,47 22,40
+            Z
+        "/>
+
+    <!-- Sword slash (thick diagonal stroke with rounded ends) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="
+            M38,78
+            Q36,76 38,74
+            L76,36
+            Q78,34 80,36
+            Q82,38 80,40
+            L42,78
+            Q40,80 38,78
+            Z
+        "/>
+
+    <!-- Guard / hilt hint (small ring-ish shape) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="
+            M40,76
+            Q46,70 52,76
+            Q54,78 56,76
+            Q60,72 64,76
+            Q66,78 64,80
+            Q60,84 56,80
+            Q54,78 52,80
+            Q46,86 40,80
+            Q38,78 40,76
+            Z
+        "/>
+
+</vector>

@@ -15,3 +15,8 @@ It enables dual app installation directly through the shell interface, providing
 
 ![Screenshot_2026-01-20-23-43-48-095_com nathanhanapps appdualzuku](https://github.com/user-attachments/assets/9ce69d11-6b64-44f8-966a-d45c5271c846)
 
+## License
+This project is licensed under the GNU General Public License v3.0 (GPLv3).
+You may copy, distribute, and modify the software as long as you track changes/dates in source files. Any modifications to this code must also be made available under the GPLv3 license.
+For the full license text, please search the GNU GPL v3.0.
+

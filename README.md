@@ -1,4 +1,4 @@
-# A simple app that takes advantage of Shizuku privilege.
+# A dual app manager that takes advantage of Shizuku privilege.
 ## Overview
 This is a lightweight application that leverages Shizuku privileges to execute adb shell commands.
 It enables dual app installation directly through the shell interface, providing a streamlined way to manage multiple instances of the same app.

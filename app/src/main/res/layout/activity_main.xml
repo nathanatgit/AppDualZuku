@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
-    <!-- Main Content -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
         <!-- Toolbar -->
-
-        <!-- Container for switching between App List and Settings -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -27,7 +25,9 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- App List View (default visible) -->
+            <!-- ════════════════════════════════════════════════════════
+                 App List View
+                 ════════════════════════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/layoutAppList"
                 android:layout_width="match_parent"
@@ -35,7 +35,7 @@
                 android:orientation="vertical"
                 android:visibility="visible">
 
-                <!-- Search Bar -->
+                <!-- Search bar -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -45,7 +45,6 @@
                     app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
                     app:boxStrokeWidth="0dp"
                     app:boxStrokeWidthFocused="0dp"
-
                     style="@style/Widget.Material3.TextInputLayout.FilledBox">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -58,13 +57,22 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipDualFilter"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="All"
+                    app:chipIcon="@android:drawable/ic_menu_sort_by_size" />
+
                 <FrameLayout
                     android:id="@+id/appsListContainer"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1">
 
-                    <!-- Real list -->
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvApps"
                         android:layout_width="match_parent"
@@ -72,7 +80,7 @@
                         android:clipToPadding="false"
                         android:paddingBottom="80dp" />
 
-                    <!-- Shimmer overlay (blocks touches) -->
+                    <!-- Shimmer overlay -->
                     <com.facebook.shimmer.ShimmerFrameLayout
                         android:id="@+id/shimmerOverlay"
                         android:layout_width="match_parent"
@@ -84,7 +92,6 @@
                         android:paddingBottom="80dp"
                         app:shimmer_auto_start="false">
 
-                        <!-- 8 skeleton rows -->
                         <LinearLayout
                             android:id="@+id/skeletonList"
                             android:layout_width="match_parent"
@@ -103,14 +110,16 @@
                             <include layout="@layout/item_app_skeleton" />
 
                         </LinearLayout>
+
                     </com.facebook.shimmer.ShimmerFrameLayout>
 
                 </FrameLayout>
 
-
             </LinearLayout>
 
-            <!-- Settings View (hidden by default) -->
+            <!-- ════════════════════════════════════════════════════════
+                 Settings View
+                 ════════════════════════════════════════════════════════ -->
             <androidx.core.widget.NestedScrollView
                 android:id="@+id/layoutSettings"
                 android:layout_width="match_parent"
@@ -125,12 +134,14 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Settings content -->
+                    <!-- ── About card ───────────────────────────────── -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardAbout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
-                        app:cardElevation="2dp">
+                        app:cardElevation="1dp"
+                        app:strokeWidth="0dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -142,7 +153,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_about"
-                                android:textSize="18sp"
+                                android:textSize="16sp"
                                 android:textStyle="bold"
                                 android:textColor="?android:textColorPrimary" />
 
@@ -166,14 +177,182 @@
 
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Placeholder for future settings -->
-                    <TextView
+                    <!-- ── Managed Workspaces card ──────────────────── -->
+                    <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/coming_soon"
-                        android:textAlignment="center"
-                        android:textColor="?android:textColorSecondary"
-                        android:padding="32dp" />
+                        android:layout_marginBottom="16dp"
+                        app:cardElevation="1dp"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <!-- Header + subtitle -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/managed_workspaces"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="?android:textColorPrimary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/workspaces_description"
+                                android:textSize="12sp"
+                                android:textColor="?android:textColorSecondary"
+                                android:layout_marginTop="4dp"
+                                android:layout_marginBottom="12dp" />
+
+                            <!-- Create + Refresh buttons -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="12dp">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnCreateWorkspace"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/create_workspace"
+                                    app:icon="@android:drawable/ic_input_add"
+                                    style="@style/Widget.Material3.Button.TonalButton" />
+
+                                <Space android:layout_width="8dp" android:layout_height="1dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnRefreshWorkspaces"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/refresh"
+                                    style="@style/Widget.Material3.Button.TextButton" />
+
+                            </LinearLayout>
+
+                            <!-- Workspace list (nested inside card, non-scrollable RV) -->
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/rvWorkspaces"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:nestedScrollingEnabled="false"
+                                android:overScrollMode="never" />
+
+                            <!-- Empty state -->
+                            <TextView
+                                android:id="@+id/tvNoWorkspacesInfo"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/no_workspaces_info"
+                                android:textAlignment="center"
+                                android:textColor="?android:textColorSecondary"
+                                android:textSize="13sp"
+                                android:padding="16dp"
+                                android:visibility="gone" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- ── Hidden Developer Panel ───────────────────── -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardDevPanel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:visibility="gone"
+                        app:cardElevation="1dp"
+                        app:strokeColor="?attr/colorError"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⚙ Developer Console"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="?attr/colorError"
+                                android:layout_marginBottom="12dp" />
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="@string/dev_cmd_hint"
+                                app:boxBackgroundMode="outline"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etDevCmd"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="text"
+                                    android:maxLines="1"
+                                    android:fontFamily="monospace" />
+
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginTop="8dp">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnDevRun"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/dev_run"
+                                    style="@style/Widget.Material3.Button.TonalButton" />
+
+                                <Space android:layout_width="8dp" android:layout_height="1dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnDevClear"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/dev_clear"
+                                    style="@style/Widget.Material3.Button.TextButton" />
+
+                            </LinearLayout>
+
+                            <!-- Output area -->
+                            <androidx.core.widget.NestedScrollView
+                                android:id="@+id/scrollDevOutput"
+                                android:layout_width="match_parent"
+                                android:layout_height="200dp"
+                                android:layout_marginTop="12dp"
+                                android:background="?attr/colorSurfaceVariant"
+                                android:padding="1dp">
+
+                                <TextView
+                                    android:id="@+id/tvDevOutput"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="monospace"
+                                    android:textSize="12sp"
+                                    android:padding="8dp"
+                                    android:textIsSelectable="true"
+                                    android:textColor="?android:textColorPrimary"
+                                    android:text="@string/dev_output_hint" />
+
+                            </androidx.core.widget.NestedScrollView>
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
 
                 </LinearLayout>
 
@@ -183,7 +362,7 @@
 
     </LinearLayout>
 
-    <!-- Bottom Navigation Bar -->
+    <!-- Bottom Navigation -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"

@@ -14,23 +14,44 @@ class AppAdapter(
     private val onItemClick: (AppItem) -> Unit
 ) : ListAdapter<AppItem, AppAdapter.VH>(DIFF) {
 
+    enum class DualFilter { ALL, DUAL_ONLY, MAIN_ONLY }
+
     private var fullList: List<AppItem> = emptyList()
+    private var currentQuery = ""
+    private var dualFilter = DualFilter.ALL
 
     fun submitFullList(list: List<AppItem>) {
         fullList = list
-        submitList(list)
+        applyFilters()
     }
 
     fun filter(query: String) {
-        val q = query.trim().lowercase()
-        if (q.isEmpty()) {
-            submitList(fullList)
-            return
+        currentQuery = query.trim().lowercase()
+        applyFilters()
+    }
+
+    fun setDualFilter(f: DualFilter) {
+        dualFilter = f
+        applyFilters()
+    }
+
+    private fun applyFilters() {
+        var result = fullList
+
+        if (currentQuery.isNotEmpty()) {
+            result = result.filter {
+                it.label.lowercase().contains(currentQuery) ||
+                        it.packageName.lowercase().contains(currentQuery)
+            }
         }
-        val filtered = fullList.filter {
-            it.label.lowercase().contains(q) || it.packageName.lowercase().contains(q)
+
+        result = when (dualFilter) {
+            DualFilter.DUAL_ONLY -> result.filter { it.isDual }
+            DualFilter.MAIN_ONLY -> result.filter { !it.isDual }
+            DualFilter.ALL       -> result
         }
-        submitList(filtered)
+
+        submitList(result)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -38,25 +59,28 @@ class AppAdapter(
         return VH(v, onItemClick)
     }
 
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        holder.bind(getItem(position))
-    }
+    override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(getItem(position))
 
     class VH(itemView: View, private val onItemClick: (AppItem) -> Unit) :
         RecyclerView.ViewHolder(itemView) {
 
-        private val ivIcon: ImageView = itemView.findViewById(R.id.ivIcon)
-        private val tvLabel: TextView = itemView.findViewById(R.id.tvLabel)
-        private val tvPkg: TextView = itemView.findViewById(R.id.tvPkg)
-        private val chipStatus: Chip = itemView.findViewById(R.id.chipStatus)
+        private val ivIcon:     ImageView = itemView.findViewById(R.id.ivIcon)
+        private val tvLabel:    TextView  = itemView.findViewById(R.id.tvLabel)
+        private val tvPkg:      TextView  = itemView.findViewById(R.id.tvPkg)
+        private val chipStatus: Chip      = itemView.findViewById(R.id.chipStatus)
 
         fun bind(item: AppItem) {
             ivIcon.setImageDrawable(item.icon)
             tvLabel.text = item.label
-            tvPkg.text = item.packageName
+            tvPkg.text   = item.packageName
 
-            // For now we only show "Main only" (dual status comes later)
-            chipStatus.text = if (item.isDual) "Dual" else "Main only"
+            chipStatus.text = when (item.workspaceCount) {
+                0    -> itemView.context.getString(R.string.main_only)
+                1    -> itemView.context.getString(R.string.spaces_count_one)
+                else -> itemView.context.getString(R.string.spaces_count, item.workspaceCount)
+            }
+            // Highlight chip when the app lives in at least one workspace
+            chipStatus.isChecked = item.isDual
 
             itemView.setOnClickListener { onItemClick(item) }
         }
@@ -64,16 +88,13 @@ class AppAdapter(
 
     companion object {
         private val DIFF = object : DiffUtil.ItemCallback<AppItem>() {
-            override fun areItemsTheSame(oldItem: AppItem, newItem: AppItem): Boolean {
-                return oldItem.packageName == newItem.packageName
-            }
+            override fun areItemsTheSame(a: AppItem, b: AppItem) =
+                a.packageName == b.packageName
 
-            override fun areContentsTheSame(oldItem: AppItem, newItem: AppItem): Boolean {
-                // icon Drawable compare isn’t stable; compare important fields
-                return oldItem.packageName == newItem.packageName &&
-                        oldItem.label == newItem.label &&
-                        oldItem.isDual == newItem.isDual
-            }
+            override fun areContentsTheSame(a: AppItem, b: AppItem) =
+                a.packageName      == b.packageName &&
+                a.label            == b.label &&
+                a.installedUserIds == b.installedUserIds
         }
     }
 }

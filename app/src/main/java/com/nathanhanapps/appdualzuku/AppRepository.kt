@@ -54,7 +54,7 @@ class AppRepository(private val context: Context) {
                 packageName = ai.packageName,
                 label = label,
                 icon = icon,
-                isDual = false
+                installedUserIds = emptySet()
             )
         }
 

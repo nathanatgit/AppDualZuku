@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="main_only">主空间</string>
+    <string name="spaces_count">%d 个分身</string>
     <string name="search_apps">搜索应用</string>
     <string name="settings_about">关于</string>
     <string name="about_AppDualZuku">使用Shizuku管理双开应用</string>
     <string name="coming_soon">更多功能敬请期待……</string>
-    <string name="install_to_dual_space_user_999">双开应用（安装至用户999）</string>
+    <string name="shizuku_required">需要Shizuku权限</string>
+    <string name="install_to_dual_space_user_999">双开应用</string>
     <string name="remove_from_dual_space">移除双开应用</string>
+    <string name="remove">移除</string>
     <string name="cancel">取消</string>
     <string name="processing">正在处理</string>
     <string name="all_apps">所有应用</string>
@@ -18,4 +21,25 @@
     <string name="launch_app">启动应用</string>
     <string name="open_app_info_dual">打开双开应用详情</string>
     <string name="open_app_info_main">打开应用详情</string>
+    <string name="spaces_count_one">1个分身</string>
+    <string name="managed_workspaces">管理空间</string>
+    <string name="workspaces_description">创建多个工作空间以任意多开应用。</string>
+    <string name="create_workspace">创建工作空间</string>
+    <string name="refresh">刷新</string>
+    <string name="no_workspaces_info">还没有多开空间</string>
+    <string name="remove_workspace_title">移除躲开空间</string>
+    <string name="remove_workspace_confirm">确定删除“%1$s” （用户 %2$d）吗？“所有”用户内的应用及数据都将被删除！</string>
+    <string name="workspaces">多开空间</string>
+    <string name="no_workspaces_hint">没有发现工作空间，请在设置-管理空间中创建。</string>
+    <string name="main_space">主空间</string>
+    <string name="installed">已安装</string>
+    <string name="not_installed">未安装</string>
+    <string name="install">安装</string>
+    <string name="uninstall">卸载</string>
+    <string name="launch">启动</string>
+    <string name="info">应用信息</string>
+    <string name="dev_cmd_hint">输入ADB / Shell 命令……</string>
+    <string name="dev_run">运行</string>
+    <string name="dev_clear">清除</string>
+    <string name="dev_output_hint">命令输出结果在此显示……</string>
 </resources>

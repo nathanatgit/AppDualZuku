@@ -93,8 +93,8 @@ class AppAdapter(
 
             override fun areContentsTheSame(a: AppItem, b: AppItem) =
                 a.packageName      == b.packageName &&
-                a.label            == b.label &&
-                a.installedUserIds == b.installedUserIds
+                        a.label            == b.label &&
+                        a.installedUserIds.size == b.installedUserIds.size && a.installedUserIds.containsAll(b.installedUserIds)
         }
     }
 }

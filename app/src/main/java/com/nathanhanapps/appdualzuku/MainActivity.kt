@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.Menu
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.RelativeSizeSpan
@@ -13,12 +14,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
+import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.nathanhanapps.appdualzuku.databinding.ActivityMainBinding
@@ -66,6 +69,9 @@ class MainActivity : AppCompatActivity() {
     // ════════════════════════════════════════════════════════════════════════
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply Material 3 Dynamic Colors
+        DynamicColors.applyToActivityIfAvailable(this)
+
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -77,6 +83,27 @@ class MainActivity : AppCompatActivity() {
         repo = AppRepository(this)
         loadAppsUser0()
         checkShizukuAndInitialize()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+
+        val searchItem = menu.findItem(R.id.action_search)
+        val searchView = searchItem.actionView as SearchView
+
+        searchView.queryHint = getString(R.string.search_apps)
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean = false
+            override fun onQueryTextChange(newText: String?): Boolean {
+                adapter.filter(newText.orEmpty())
+                return true
+            }
+        })
+
+        // Hide search when switched to Settings
+        searchItem.isVisible = binding.layoutAppList.isVisible
+
+        return true
     }
 
 
@@ -168,14 +195,6 @@ class MainActivity : AppCompatActivity() {
         adapter = AppAdapter { item -> showAppActionsBottomSheet(item) }
         binding.rvApps.adapter = adapter
 
-        binding.etSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                adapter.filter(s?.toString().orEmpty())
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
         // ── Dual filter chip ─────────────────────────────────────────────────
         val chipDualFilter = binding.chipDualFilter
         val filterStates = listOf(
@@ -196,20 +215,20 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNav.setOnItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_all -> {
-                    showAppList()
                     currentFilter = AppRepository.AppFilter.ALL
+                    showAppList()
                     loadAppsUser0()
                     true
                 }
                 R.id.nav_user -> {
-                    showAppList()
                     currentFilter = AppRepository.AppFilter.USER_ONLY
+                    showAppList()
                     loadAppsUser0()
                     true
                 }
                 R.id.nav_system -> {
-                    showAppList()
                     currentFilter = AppRepository.AppFilter.SYSTEM_ONLY
+                    showAppList()
                     loadAppsUser0()
                     true
                 }
@@ -272,6 +291,7 @@ class MainActivity : AppCompatActivity() {
     private fun showAppList() {
         binding.layoutAppList.isVisible = true
         binding.layoutSettings.isVisible = false
+        invalidateOptionsMenu() // Refresh search button visibility
     }
 
     private fun showSettings() {
@@ -279,6 +299,7 @@ class MainActivity : AppCompatActivity() {
         binding.layoutSettings.isVisible = true
         title = getString(R.string.settings)
         if (::wsRepo.isInitialized) loadWorkspaces()
+        invalidateOptionsMenu() // Refresh search button visibility
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -731,8 +752,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-                if (!ws.isRunning) {
-                    wsRepo.startWorkspace(ws.userId) { _, _ -> doInstall() }
+                if (!wsRepo.isServiceConnected()) { // Simple check
+                     wsRepo.startWorkspace(ws.userId) { _, _ -> doInstall() }
                 } else {
                     doInstall()
                 }

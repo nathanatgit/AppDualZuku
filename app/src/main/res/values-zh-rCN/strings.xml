@@ -17,7 +17,7 @@
     <string name="spaces_count_one">1个分身</string>
     <string name="managed_workspaces">管理空间</string>
     <string name="workspaces_description">创建多个用户配置文件以任意多开应用。</string>
-    <string name="workspaces_notice">🛡️ <b>工作空间：</b> 传统工作资料区，设置、文件等相互隔离。\n🧬 <b>分身空间：</b> 为应用分身优化的轻量空间，设置、文件等可共享（但并非所有设备支持）。</string>
+    <string name="workspaces_notice"><b>工作空间：</b> 传统工作资料区，设置、文件等相互隔离。\n<b>分身空间：</b> 为应用分身优化的轻量空间，设置、文件等可共享（但并非所有设备支持）。</string>
     <string name="create_workspace">工作空间</string>
     <string name="create_clone_workspace">克隆空间</string>
     <string name="refresh">刷新</string>
@@ -61,5 +61,6 @@
     <string name="no_launcher_found">未发现可启动活动</string>
     <string name="launch_failed">启动失败： %1$s</string>
     <string name="failed_generic">失败：%1$s</string>
+    <string name="all">全部</string>
     <string name="developer_console">⚙ 开发者终端</string>
 </resources>

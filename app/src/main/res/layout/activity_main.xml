@@ -35,34 +35,13 @@
                 android:orientation="vertical"
                 android:visibility="visible">
 
-                <!-- Search bar -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="16dp"
-                    app:boxBackgroundMode="filled"
-                    app:startIconDrawable="@android:drawable/ic_menu_search"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                    app:boxStrokeWidth="0dp"
-                    app:boxStrokeWidthFocused="0dp"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etSearch"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="@string/search_apps"
-                        android:inputType="text"
-                        android:maxLines="1" />
-
-                </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipDualFilter"
                     style="@style/Widget.Material3.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
+                    android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp"
                     android:text="@string/all"
                     app:chipIcon="@android:drawable/ic_menu_sort_by_size" />

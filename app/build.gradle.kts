@@ -12,7 +12,7 @@ android {
         minSdk = 31
         targetSdk = 36
         versionCode = 1
-        versionName = "1.1"
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -59,6 +59,4 @@ dependencies {
     implementation(libs.shimmer)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
-    implementation(libs.material.v1130)
-
 }

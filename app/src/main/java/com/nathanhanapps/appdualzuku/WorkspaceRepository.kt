@@ -88,4 +88,6 @@ class WorkspaceRepository(private val shell: ShellClient) {
         while ("$prefix$i" in taken) i++
         return "$prefix$i"
     }
+
+    fun isServiceConnected(): Boolean = shell.isServiceConnected()
 }

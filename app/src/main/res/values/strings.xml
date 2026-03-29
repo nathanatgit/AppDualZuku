@@ -37,6 +37,7 @@
     <string name="launch">Launch</string>
     <string name="info">Info</string>
     <string name="remove">Remove</string>
+    <string name="stopped">Stopped</string>
 
     <!-- Common -->
     <string name="cancel">Cancel</string>

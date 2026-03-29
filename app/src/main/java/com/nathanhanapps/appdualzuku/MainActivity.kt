@@ -2,13 +2,8 @@ package com.nathanhanapps.appdualzuku
 
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.view.Menu
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.RelativeSizeSpan
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -17,7 +12,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
@@ -25,6 +19,8 @@ import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.nathanhanapps.appdualzuku.databinding.ActivityMainBinding
+import com.nathanhanapps.appdualzuku.databinding.BottomSheetAppActionsBinding
+import com.nathanhanapps.appdualzuku.databinding.ItemWorkspaceActionBinding
 import rikka.shizuku.Shizuku
 import java.util.concurrent.Executors
 import androidx.core.view.WindowInsetsControllerCompat
@@ -384,11 +380,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun requireShizukuOrToast(): Boolean {
+    private fun requireShizukuOrToast(silent: Boolean = false): Boolean {
         val ok = Shizuku.pingBinder() &&
                 Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED &&
                 ::shell.isInitialized
-        if (!ok) Toast.makeText(this, getString(R.string.shizuku_required), Toast.LENGTH_SHORT).show()
+        if (!ok && !silent) Toast.makeText(this, getString(R.string.shizuku_required), Toast.LENGTH_SHORT).show()
         return ok
     }
 
@@ -633,43 +629,36 @@ class MainActivity : AppCompatActivity() {
     // ════════════════════════════════════════════════════════════════════════
 
     private fun showAppActionsBottomSheet(item: AppItem) {
-        val dialog = BottomSheetDialog(this)
-        val view   = layoutInflater.inflate(R.layout.bottom_sheet_app_actions, null, false)
-        dialog.setContentView(view)
+        val sheetBinding = BottomSheetAppActionsBinding.inflate(layoutInflater)
+        val dialog = BottomSheetDialog(this).apply {
+            setContentView(sheetBinding.root)
+        }
 
-        // Header
-        view.findViewById<ImageView>(R.id.ivAppIcon).setImageDrawable(item.icon)
-        view.findViewById<TextView>(R.id.tvAppName).text     = item.label
-        view.findViewById<TextView>(R.id.tvPackageName).text = item.packageName
+        // Header Setup
+        with(sheetBinding) {
+            ivAppIcon.setImageDrawable(item.icon)
+            tvAppName.text = item.label
+            tvPackageName.text = item.packageName
+            btnCancel.setOnClickListener { dialog.dismiss() }
+        }
 
-        val shizukuReady = Shizuku.pingBinder() &&
-                Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        // Main Space Buttons
+        val shizukuReady = requireShizukuOrToast(silent = true)
+        with(sheetBinding) {
+            btnLaunchMain.isEnabled = shizukuReady
+            btnAppInfoMain.isEnabled = shizukuReady
+            btnLaunchMain.setOnClickListener  { launchApp(0, item.packageName) }
+            btnAppInfoMain.setOnClickListener { openAppInfo(0, item.packageName) }
+        }
 
-        // Main-user buttons
-        val btnLaunchMain  = view.findViewById<MaterialButton>(R.id.btnLaunchMain)
-        val btnAppInfoMain = view.findViewById<MaterialButton>(R.id.btnAppInfoMain)
-        btnLaunchMain.isEnabled  = shizukuReady
-        btnAppInfoMain.isEnabled = shizukuReady
-        btnLaunchMain.setOnClickListener  { launchApp(0, item.packageName) }
-        btnAppInfoMain.setOnClickListener { openAppInfo(0, item.packageName) }
-        view.findViewById<MaterialButton>(R.id.btnCancel).setOnClickListener { dialog.dismiss() }
-
-        // Workspace rows
-        val wsContainer   = view.findViewById<LinearLayout>(R.id.layoutWorkspaceActions)
-        val tvNoWorkspaces = view.findViewById<TextView>(R.id.tvNoWorkspaces)
-        val layoutProgress = view.findViewById<LinearLayout>(R.id.layoutProgress)
-        val tvProgressText = view.findViewById<TextView>(R.id.tvProgressText)
-
+        // Workspaces Logic
         val managedWorkspaces = cachedWorkspaces.filter { !it.isMainUser }
-        if (managedWorkspaces.isEmpty()) {
-            tvNoWorkspaces.isVisible = true
-        } else {
-            tvNoWorkspaces.isVisible = false
-            managedWorkspaces.forEach { ws ->
-                val row = layoutInflater.inflate(R.layout.item_workspace_action, wsContainer, false)
-                bindWorkspaceActionRow(row, ws, item, dialog, layoutProgress, tvProgressText)
-                wsContainer.addView(row)
-            }
+        sheetBinding.tvNoWorkspaces.isVisible = managedWorkspaces.isEmpty()
+        sheetBinding.layoutWorkspaceActions.removeAllViews()
+
+        managedWorkspaces.forEach { ws ->
+            val rowBinding = ItemWorkspaceActionBinding.inflate(layoutInflater, sheetBinding.layoutWorkspaceActions, true)
+            bindWorkspaceActionRow(rowBinding, ws, item, dialog, sheetBinding)
         }
 
         dialog.show()
@@ -680,92 +669,73 @@ class MainActivity : AppCompatActivity() {
      * Handles install ↔ uninstall toggle and launch / app-info buttons.
      */
     private fun bindWorkspaceActionRow(
-        row: View,
+        row: ItemWorkspaceActionBinding,
         ws: WorkspaceInfo,
         item: AppItem,
         dialog: BottomSheetDialog,
-        layoutProgress: LinearLayout,
-        tvProgressText: TextView
+        sheetBinding: BottomSheetAppActionsBinding
     ) {
         var isInstalled = item.installedUserIds.contains(ws.userId)
-
-        val tvName          = row.findViewById<TextView>(R.id.tvWsActionName)
-        val chipInstalled   = row.findViewById<Chip>(R.id.chipWsInstalled)
-        val btnInstall      = row.findViewById<MaterialButton>(R.id.btnWsInstallToggle)
-        val btnLaunch       = row.findViewById<MaterialButton>(R.id.btnWsLaunch)
-        val btnInfo         = row.findViewById<MaterialButton>(R.id.btnWsAppInfo)
-
         val running = ws.isRunning
-        tvName.text = buildString {
+
+        row.tvWsActionName.text = buildString {
             append(ws.displayName)
             append("  (User ${ws.userId}")
-            if (!running) append(" · Stopped")
+            if (!running) append(" · ${getString(R.string.stopped)}")
             append(")")
         }
 
-        fun refreshRow(installed: Boolean) {
-            isInstalled              = installed
-            chipInstalled.text       = if (installed) getString(R.string.installed) else getString(R.string.not_installed)
-            chipInstalled.isChecked  = installed
-            btnInstall.text          = if (installed) getString(R.string.uninstall) else getString(R.string.install)
-            btnLaunch.isEnabled      = installed && running
-            btnInfo.isEnabled        = installed
+        fun updateUiState(installed: Boolean) {
+            isInstalled = installed
+            with(row) {
+                chipWsInstalled.text = getString(if (installed) R.string.installed else R.string.not_installed)
+                chipWsInstalled.isChecked = installed
+                btnWsInstallToggle.text = getString(if (installed) R.string.uninstall else R.string.install)
+                btnWsLaunch.isEnabled = installed && running
+                btnWsAppInfo.isEnabled = installed
+            }
         }
 
-        refreshRow(isInstalled)
+        updateUiState(isInstalled)
 
-        btnInstall.setOnClickListener {
-            val actionText = if (isInstalled) getString(R.string.uninstall) else getString(R.string.install)
-            layoutProgress.isVisible = true
-            tvProgressText.text       = actionText
-            btnInstall.isEnabled      = false
-            btnLaunch.isEnabled       = false
+        row.btnWsInstallToggle.setOnClickListener {
+            val actionText = row.btnWsInstallToggle.text
+            sheetBinding.layoutProgress.isVisible = true
+            sheetBinding.tvProgressText.text = actionText
+            row.btnWsInstallToggle.isEnabled = false
+
+            val callback: (Boolean, String) -> Unit = { success, msg ->
+                runOnUiThread {
+                    sheetBinding.layoutProgress.isVisible = false
+                    row.btnWsInstallToggle.isEnabled = true
+                    if (success) {
+                        updateUiState(!isInstalled)
+                        updateAllWorkspaceStatuses()
+                    } else {
+                        Toast.makeText(this, getString(R.string.failed_generic, msg), Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
 
             if (isInstalled) {
-                wsRepo.uninstallFromWorkspace(ws.userId, item.packageName) { ok, msg ->
-                    runOnUiThread {
-                        layoutProgress.isVisible = false
-                        btnInstall.isEnabled      = true
-                        if (ok) {
-                            refreshRow(false)
-                            updateAllWorkspaceStatuses()
-                        } else {
-                            Toast.makeText(this, getString(R.string.failed_generic, msg), Toast.LENGTH_LONG).show()
-                            refreshRow(isInstalled)
-                        }
-                    }
-                }
+                wsRepo.uninstallFromWorkspace(ws.userId, item.packageName, callback)
             } else {
-                // Auto-start workspace if not running before installing
-                val doInstall = {
-                    wsRepo.installToWorkspace(ws.userId, item.packageName) { ok, msg ->
-                        runOnUiThread {
-                            layoutProgress.isVisible = false
-                            btnInstall.isEnabled      = true
-                            if (ok) {
-                                refreshRow(true)
-                                updateAllWorkspaceStatuses()
-                            } else {
-                                Toast.makeText(this, getString(R.string.failed_generic, msg), Toast.LENGTH_LONG).show()
-                                btnInstall.isEnabled = true
-                            }
-                        }
+                if (!running) {
+                    wsRepo.startWorkspace(ws.userId) { _, _ ->
+                        wsRepo.installToWorkspace(ws.userId, item.packageName, callback)
                     }
-                }
-                if (!wsRepo.isServiceConnected()) { // Simple check
-                     wsRepo.startWorkspace(ws.userId) { _, _ -> doInstall() }
                 } else {
-                    doInstall()
+                    wsRepo.installToWorkspace(ws.userId, item.packageName, callback)
                 }
             }
         }
 
-        btnLaunch.setOnClickListener {
+        row.btnWsLaunch.setOnClickListener {
             dialog.dismiss()
             launchApp(ws.userId, item.packageName)
         }
 
-        btnInfo.setOnClickListener {
+        row.btnWsAppInfo.setOnClickListener {
             openAppInfo(ws.userId, item.packageName)
         }
     }

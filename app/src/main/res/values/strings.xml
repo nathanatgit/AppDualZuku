@@ -84,7 +84,7 @@
     <string name="no_launcher_found">No launcher activity found</string>
     <string name="launch_failed">Launch failed: %1$s</string>
     <string name="failed_generic">Failed: %1$s</string>
-    <string name="app_title_format">"AppDualZuku\n(%1$s: %2$d·  Workspaces: %3$d)  "</string>
+    <string name="app_title_format">"AppDualZuku\n(%1$s: %2$d·Workspaces: %3$d)  "</string>
     <string name="filter_system">System</string>
     <string name="all">All</string>
     <string name="developer_console">⚙ Developer Console</string>

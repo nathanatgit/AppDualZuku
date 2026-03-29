@@ -41,7 +41,7 @@
     <string name="error_shizuku_not_init">错误：Shizuku未初始化</string>
     <string name="dev_running_cmd">正在运行：%1$s ……</string>
     <string name="dev_console_unlocked">🛠 开发者终端已解锁</string>
-    <string name="dev_remaining_taps">再按 %1$d 次解锁Shell终端</string>
+    <string name="dev_remaining_taps">再按 %1$d 次解锁Shell终端%2$s</string>
     <string name="dev_no_output">（无输出）</string>
     <string name="filter_all">所有</string>
     <string name="filter_in_workspace">在工作区</string>

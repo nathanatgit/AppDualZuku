@@ -2,19 +2,13 @@ package com.nathanhanapps.appdualzuku
 
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.View
 import android.view.Menu
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.chip.Chip
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -279,10 +273,6 @@ class MainActivity : AppCompatActivity() {
             binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.1")
         }
     }
-
-    // ════════════════════════════════════════════════════════════════════════
-    //  View Switching
-    // ════════════════════════════════════════════════════════════════════════
 
     private fun showAppList() {
         binding.layoutAppList.isVisible = true

@@ -64,7 +64,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:layout_marginBottom="8dp"
-                    android:text="All"
+                    android:text="@string/all"
                     app:chipIcon="@android:drawable/ic_menu_sort_by_size" />
 
                 <FrameLayout
@@ -158,6 +158,7 @@
                                 android:textColor="?android:textColorPrimary" />
 
                             <TextView
+                                android:id="@+id/tvAppVersion"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/app_name_version"
@@ -206,6 +207,15 @@
                                 android:text="@string/workspaces_description"
                                 android:textSize="12sp"
                                 android:textColor="?android:textColorSecondary"
+                                android:layout_marginTop="4dp" />
+
+                            <!-- Difference Notice -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/workspaces_notice"
+                                android:textSize="11sp"
+                                android:textColor="?android:textColorSecondary"
                                 android:layout_marginTop="4dp"
                                 android:layout_marginBottom="12dp" />
 
@@ -225,7 +235,18 @@
                                     app:icon="@android:drawable/ic_input_add"
                                     style="@style/Widget.Material3.Button.TonalButton" />
 
-                                <Space android:layout_width="8dp" android:layout_height="1dp" />
+                                <Space android:layout_width="4dp" android:layout_height="1dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnCreateCloneWorkspace"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/create_clone_workspace"
+                                    app:icon="@android:drawable/ic_input_add"
+                                    style="@style/Widget.Material3.Button.TonalButton" />
+
+                                <Space android:layout_width="4dp" android:layout_height="1dp" />
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btnRefreshWorkspaces"
@@ -280,7 +301,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="⚙ Developer Console"
+                                android:text="@string/developer_console"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
                                 android:textColor="?attr/colorError"

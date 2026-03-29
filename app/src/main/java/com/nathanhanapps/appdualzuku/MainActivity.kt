@@ -5,11 +5,15 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.RelativeSizeSpan
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
@@ -17,7 +21,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.chip.Chip
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.nathanhanapps.appdualzuku.databinding.ActivityMainBinding
 import rikka.shizuku.Shizuku
 import java.util.concurrent.Executors
@@ -25,6 +28,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.content.ContextCompat
 import android.os.Handler
 import android.os.Looper
+import androidx.core.view.isVisible
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,7 +48,6 @@ class MainActivity : AppCompatActivity() {
     private var cachedWorkspaces: List<WorkspaceInfo> = emptyList()
 
     // ── UI / lifecycle flags ──────────────────────────────────────────────────
-    private val REQUEST_SHIZUKU_PERMISSION = 1234
     private var isInitialized = false
     private var aboutClickCount = 0
     private var currentFilter = AppRepository.AppFilter.ALL
@@ -52,7 +55,11 @@ class MainActivity : AppCompatActivity() {
     // ── Shimmer debounce ─────────────────────────────────────────────────────
     private val uiHandler = Handler(Looper.getMainLooper())
     private var showShimmerRunnable: Runnable? = null
-    private val SHIMMER_DELAY_MS = 400L
+
+    companion object {
+        private const val REQUEST_SHIZUKU_PERMISSION = 1234
+        private const val SHIMMER_DELAY_MS = 400L
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     //  Lifecycle
@@ -65,6 +72,7 @@ class MainActivity : AppCompatActivity() {
 
         applyStatusBarToMatchToolbar()
         setupUI()
+        setupAboutVersion()
 
         repo = AppRepository(this)
         loadAppsUser0()
@@ -77,13 +85,13 @@ class MainActivity : AppCompatActivity() {
     // ════════════════════════════════════════════════════════════════════════
 
     private fun setupDevPanel() {
-        val cardAbout   = findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardAbout)
-        val cardDevPanel = findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardDevPanel)
-        val etDevCmd    = findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etDevCmd)
-        val btnDevRun   = findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDevRun)
-        val btnDevClear = findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDevClear)
-        val tvDevOutput = findViewById<TextView>(R.id.tvDevOutput)
-        val scrollDevOutput = findViewById<androidx.core.widget.NestedScrollView>(R.id.scrollDevOutput)
+        val cardAbout   = binding.cardAbout
+        val cardDevPanel = binding.cardDevPanel
+        val etDevCmd    = binding.etDevCmd
+        val btnDevRun   = binding.btnDevRun
+        val btnDevClear = binding.btnDevClear
+        val tvDevOutput = binding.tvDevOutput
+        val scrollDevOutput = binding.scrollDevOutput
 
         // 5-tap unlock on the About card
         cardAbout.setOnClickListener {
@@ -91,14 +99,14 @@ class MainActivity : AppCompatActivity() {
             val remaining = 5 - aboutClickCount
             when {
                 aboutClickCount in 1..4 -> {
-                    Toast.makeText(this, "$remaining more tap${if (remaining > 1) "s" else ""} to unlock dev console", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.dev_remaining_taps, remaining, if (remaining > 1) "s" else ""), Toast.LENGTH_SHORT).show()
                 }
                 aboutClickCount >= 5 -> {
                     aboutClickCount = 0
-                    val isVisible = cardDevPanel.visibility == View.VISIBLE
-                    cardDevPanel.visibility = if (isVisible) View.GONE else View.VISIBLE
-                    if (!isVisible) {
-                        Toast.makeText(this, "🛠 Developer console unlocked", Toast.LENGTH_SHORT).show()
+                    val isCurrentlyVisible = cardDevPanel.isVisible
+                    cardDevPanel.isVisible = !isCurrentlyVisible
+                    if (!isCurrentlyVisible) {
+                        Toast.makeText(this, getString(R.string.dev_console_unlocked), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -109,21 +117,17 @@ class MainActivity : AppCompatActivity() {
             val cmd = etDevCmd.text?.toString()?.trim() ?: return@setOnClickListener
             if (cmd.isEmpty()) return@setOnClickListener
             if (!::shell.isInitialized) {
-                tvDevOutput.text = "ERROR: Shizuku shell not initialized"
+                tvDevOutput.text = getString(R.string.error_shizuku_not_init)
                 return@setOnClickListener
             }
 
             btnDevRun.isEnabled = false
-            tvDevOutput.text = "Running: $cmd  ..."
+            tvDevOutput.text = getString(R.string.dev_running_cmd, cmd)
 
             shell.execWhenReady(cmd) { output ->
                 runOnUiThread {
                     btnDevRun.isEnabled = true
-                    val result = buildString {
-                        append("$ ").append(cmd).append("")
-                                    append("─".repeat(40)).append("")
-                                        append(output.ifBlank { "(no output)" })
-                    }
+                    val result = getString(R.string.dev_output_format, cmd, "─".repeat(40), output.ifBlank { getString(R.string.dev_no_output) })
                     tvDevOutput.text = result
                     // Scroll to top so user sees the command echo
                     scrollDevOutput.post { scrollDevOutput.scrollTo(0, 0) }
@@ -159,7 +163,8 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         // ── App list RecyclerView ────────────────────────────────────────────
-        binding.rvApps.layoutManager = LinearLayoutManager(this)
+        val columns = resources.getInteger(R.integer.app_grid_columns)
+        binding.rvApps.layoutManager = GridLayoutManager(this, columns)
         adapter = AppAdapter { item -> showAppActionsBottomSheet(item) }
         binding.rvApps.adapter = adapter
 
@@ -174,9 +179,9 @@ class MainActivity : AppCompatActivity() {
         // ── Dual filter chip ─────────────────────────────────────────────────
         val chipDualFilter = binding.chipDualFilter
         val filterStates = listOf(
-            AppAdapter.DualFilter.ALL       to "All",
-            AppAdapter.DualFilter.DUAL_ONLY to "In workspace",
-            AppAdapter.DualFilter.MAIN_ONLY to "Main only"
+            AppAdapter.DualFilter.ALL       to getString(R.string.filter_all),
+            AppAdapter.DualFilter.DUAL_ONLY to getString(R.string.filter_in_workspace),
+            AppAdapter.DualFilter.MAIN_ONLY to getString(R.string.filter_main_only)
         )
         var filterIndex = 0
         chipDualFilter.setOnClickListener {
@@ -225,21 +230,38 @@ class MainActivity : AppCompatActivity() {
             onStop   = { ws -> doStopWorkspace(ws) },
             onRemove = { ws -> confirmRemoveWorkspace(ws) }
         )
-        val rvWorkspaces = findViewById<RecyclerView>(R.id.rvWorkspaces)
-        rvWorkspaces.layoutManager = LinearLayoutManager(this)
-        rvWorkspaces.adapter       = wsAdapter
-        rvWorkspaces.isNestedScrollingEnabled = false
+        binding.rvWorkspaces.layoutManager = LinearLayoutManager(this)
+        binding.rvWorkspaces.adapter       = wsAdapter
+        binding.rvWorkspaces.isNestedScrollingEnabled = false
 
         // ── Create workspace button ──────────────────────────────────────────
-        findViewById<MaterialButton>(R.id.btnCreateWorkspace).setOnClickListener {
+        binding.btnCreateWorkspace.setOnClickListener {
             if (!requireShizukuOrToast()) return@setOnClickListener
-            val name = wsRepo.suggestName(cachedWorkspaces)
-            doCreateWorkspace(name)
+            val name = wsRepo.suggestName(cachedWorkspaces, "Work")
+            doCreateWorkspace(name, "managed")
+        }
+
+        // ── Create clone workspace button ────────────────────────────────────
+        binding.btnCreateCloneWorkspace.setOnClickListener {
+            if (!requireShizukuOrToast()) return@setOnClickListener
+            val name = wsRepo.suggestName(cachedWorkspaces, "Clone")
+            doCreateWorkspace(name, "clone")
         }
 
         // ── Refresh workspaces button ────────────────────────────────────────
-        findViewById<MaterialButton>(R.id.btnRefreshWorkspaces).setOnClickListener {
+        binding.btnRefreshWorkspaces.setOnClickListener {
             if (::wsRepo.isInitialized) loadWorkspaces()
+        }
+    }
+
+    private fun setupAboutVersion() {
+        try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            val version = pInfo.versionName
+            val appName = getString(R.string.app_name)
+            binding.tvAppVersion.text = getString(R.string.app_name_version, appName, version)
+        } catch (e: Exception) {
+            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.1")
         }
     }
 
@@ -248,13 +270,13 @@ class MainActivity : AppCompatActivity() {
     // ════════════════════════════════════════════════════════════════════════
 
     private fun showAppList() {
-        binding.layoutAppList.visibility = View.VISIBLE
-        binding.layoutSettings.visibility = View.GONE
+        binding.layoutAppList.isVisible = true
+        binding.layoutSettings.isVisible = false
     }
 
     private fun showSettings() {
-        binding.layoutAppList.visibility = View.GONE
-        binding.layoutSettings.visibility = View.VISIBLE
+        binding.layoutAppList.isVisible = false
+        binding.layoutSettings.isVisible = true
         title = getString(R.string.settings)
         if (::wsRepo.isInitialized) loadWorkspaces()
     }
@@ -266,7 +288,8 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleShowShimmer() {
         cancelShowShimmer()
         showShimmerRunnable = Runnable {
-            binding.shimmerOverlay.visibility = View.VISIBLE
+            binding.rvApps.isVisible = false
+            binding.shimmerOverlay.isVisible = true
             binding.shimmerOverlay.startShimmer()
         }
         uiHandler.postDelayed(showShimmerRunnable!!, SHIMMER_DELAY_MS)
@@ -275,7 +298,8 @@ class MainActivity : AppCompatActivity() {
     private fun hideShimmerNow() {
         cancelShowShimmer()
         binding.shimmerOverlay.stopShimmer()
-        binding.shimmerOverlay.visibility = View.GONE
+        binding.shimmerOverlay.isVisible = false
+        binding.rvApps.isVisible = true
     }
 
     private fun cancelShowShimmer() {
@@ -305,10 +329,10 @@ class MainActivity : AppCompatActivity() {
         if (code == REQUEST_SHIZUKU_PERMISSION) {
             runOnUiThread {
                 if (result == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Shizuku permission granted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.shizuku_granted), Toast.LENGTH_SHORT).show()
                     initializeShellAndUpdate()
                 } else {
-                    Toast.makeText(this, "Shizuku permission required", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.shizuku_required), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -335,7 +359,7 @@ class MainActivity : AppCompatActivity() {
             isInitialized = true
             updateAllWorkspaceStatuses()
         } catch (e: Exception) {
-            Toast.makeText(this, "Error initializing: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.error_initializing, e.message ?: ""), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -366,21 +390,38 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     hideShimmerNow()
-                    Toast.makeText(this, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.error_loading_apps, e.message ?: ""), Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
     private fun updateTitle(list: List<AppItem>) {
+        if (binding.layoutSettings.isVisible) return
+
         val filterText = when (currentFilter) {
-            AppRepository.AppFilter.ALL         -> "All"
-            AppRepository.AppFilter.USER_ONLY   -> "User"
-            AppRepository.AppFilter.SYSTEM_ONLY -> "System"
+            AppRepository.AppFilter.ALL         -> getString(R.string.filter_all)
+            AppRepository.AppFilter.USER_ONLY   -> getString(R.string.filter_user)
+            AppRepository.AppFilter.SYSTEM_ONLY -> getString(R.string.filter_system)
         }
         val inWorkspace = list.count { it.isDual }
-        title = "AppDualZuku ($filterText: ${list.size})  ·  Workspaces: $inWorkspace"
+        val formatted = getString(R.string.app_title_format, filterText, list.size, inWorkspace)
+
+        // Split the string by the newline character
+        val parts = formatted.split("\n", limit = 2)
+
+        // Set the first part as the main title
+        supportActionBar?.title = parts[0]
+
+        // Set the second part (the one in parentheses) as the subtitle
+        // Subtitles are automatically smaller and appear on the second line
+        if (parts.size > 1) {
+            supportActionBar?.subtitle = parts[1]
+        } else {
+            supportActionBar?.subtitle = null
+        }
     }
+
 
     // ════════════════════════════════════════════════════════════════════════
     //  Workspace status polling (updates isDual / installedUserIds for each app)
@@ -449,31 +490,31 @@ class MainActivity : AppCompatActivity() {
             val managed = workspaces.filter { !it.isMainUser }
             runOnUiThread {
                 wsAdapter.submitList(managed)
-                val tvEmpty = findViewById<TextView>(R.id.tvNoWorkspacesInfo)
-                tvEmpty.visibility = if (managed.isEmpty()) View.VISIBLE else View.GONE
+                binding.tvNoWorkspacesInfo.isVisible = managed.isEmpty()
             }
         }
     }
 
-    private fun doCreateWorkspace(name: String) {
-        val btnCreate = findViewById<MaterialButton>(R.id.btnCreateWorkspace)
-        btnCreate.isEnabled = false
-        Toast.makeText(this, "Creating workspace \"$name\"…", Toast.LENGTH_SHORT).show()
+    private fun doCreateWorkspace(name: String, type: String) {
+        binding.btnCreateWorkspace.isEnabled = false
+        binding.btnCreateCloneWorkspace.isEnabled = false
+        Toast.makeText(this, getString(R.string.creating_workspace_toast, name), Toast.LENGTH_SHORT).show()
 
-        wsRepo.createWorkspace(name) { success, userId, output ->
-            runOnUiThread { btnCreate.isEnabled = true }
-            if (success) {
-                // Auto-start new workspace so it's immediately usable
-                wsRepo.startWorkspace(userId) { _, _ ->
-                    runOnUiThread {
-                        Toast.makeText(this, "Workspace \"$name\" created (User $userId)", Toast.LENGTH_SHORT).show()
-                        loadWorkspaces()
-                        updateAllWorkspaceStatuses()
+        wsRepo.createWorkspace(name, type) { success, userId, output ->
+            runOnUiThread {
+                binding.btnCreateWorkspace.isEnabled = true
+                binding.btnCreateCloneWorkspace.isEnabled = true
+                if (success) {
+                    // Auto-start new workspace so it's immediately usable
+                    wsRepo.startWorkspace(userId) { _, _ ->
+                        runOnUiThread {
+                            Toast.makeText(this, getString(R.string.workspace_created_toast, name, userId), Toast.LENGTH_SHORT).show()
+                            loadWorkspaces()
+                            updateAllWorkspaceStatuses()
+                        }
                     }
-                }
-            } else {
-                runOnUiThread {
-                    Toast.makeText(this, "Failed to create workspace: $output", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, getString(R.string.failed_to_create_workspace, output), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -494,41 +535,41 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doRemoveWorkspace(ws: WorkspaceInfo) {
-        Toast.makeText(this, "Removing workspace \"${ws.displayName}\"…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.removing_workspace_toast, ws.displayName), Toast.LENGTH_SHORT).show()
         wsRepo.removeWorkspace(ws.userId) { success, output ->
             runOnUiThread {
                 if (success) {
-                    Toast.makeText(this, "Workspace removed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.workspace_removed_toast), Toast.LENGTH_SHORT).show()
                     loadWorkspaces()
                     updateAllWorkspaceStatuses()
                 } else {
-                    Toast.makeText(this, "Failed: $output", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.failed_generic, output), Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
     private fun doStartWorkspace(ws: WorkspaceInfo) {
-        Toast.makeText(this, "Starting \"${ws.displayName}\"…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.starting_workspace_toast, ws.displayName), Toast.LENGTH_SHORT).show()
         wsRepo.startWorkspace(ws.userId) { success, output ->
             runOnUiThread {
                 if (success) {
                     loadWorkspaces()
                 } else {
-                    Toast.makeText(this, "Failed: $output", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.failed_generic, output), Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
 
     private fun doStopWorkspace(ws: WorkspaceInfo) {
-        Toast.makeText(this, "Stopping \"${ws.displayName}\"…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.stopping_workspace_toast, ws.displayName), Toast.LENGTH_SHORT).show()
         wsRepo.stopWorkspace(ws.userId) { success, output ->
             runOnUiThread {
                 if (success) {
                     loadWorkspaces()
                 } else {
-                    Toast.makeText(this, "Failed: $output", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.failed_generic, output), Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -547,12 +588,12 @@ class MainActivity : AppCompatActivity() {
         if (!requireShizukuOrToast()) return
         val component = getLauncherComponent(packageName)
         if (component == null) {
-            Toast.makeText(this, "No launcher activity found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.no_launcher_found), Toast.LENGTH_SHORT).show()
             return
         }
         wsRepo.launchInWorkspace(userId, component) { success, output ->
             runOnUiThread {
-                if (!success) Toast.makeText(this, "Launch failed: $output", Toast.LENGTH_LONG).show()
+                if (!success) Toast.makeText(this, getString(R.string.launch_failed, output), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -561,7 +602,7 @@ class MainActivity : AppCompatActivity() {
         if (!requireShizukuOrToast()) return
         wsRepo.openAppInfoInWorkspace(userId, packageName) { success, output ->
             runOnUiThread {
-                if (!success) Toast.makeText(this, "Failed: $output", Toast.LENGTH_LONG).show()
+                if (!success) Toast.makeText(this, getString(R.string.failed_generic, output), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -572,7 +613,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showAppActionsBottomSheet(item: AppItem) {
         val dialog = BottomSheetDialog(this)
-        val view   = layoutInflater.inflate(R.layout.bottom_sheet_app_actions, null)
+        val view   = layoutInflater.inflate(R.layout.bottom_sheet_app_actions, null, false)
         dialog.setContentView(view)
 
         // Header
@@ -600,9 +641,9 @@ class MainActivity : AppCompatActivity() {
 
         val managedWorkspaces = cachedWorkspaces.filter { !it.isMainUser }
         if (managedWorkspaces.isEmpty()) {
-            tvNoWorkspaces.visibility = View.VISIBLE
+            tvNoWorkspaces.isVisible = true
         } else {
-            tvNoWorkspaces.visibility = View.GONE
+            tvNoWorkspaces.isVisible = false
             managedWorkspaces.forEach { ws ->
                 val row = layoutInflater.inflate(R.layout.item_workspace_action, wsContainer, false)
                 bindWorkspaceActionRow(row, ws, item, dialog, layoutProgress, tvProgressText)
@@ -653,8 +694,8 @@ class MainActivity : AppCompatActivity() {
         refreshRow(isInstalled)
 
         btnInstall.setOnClickListener {
-            val actionText = if (isInstalled) "Removing…" else "Installing…"
-            layoutProgress.visibility = View.VISIBLE
+            val actionText = if (isInstalled) getString(R.string.uninstall) else getString(R.string.install)
+            layoutProgress.isVisible = true
             tvProgressText.text       = actionText
             btnInstall.isEnabled      = false
             btnLaunch.isEnabled       = false
@@ -662,13 +703,13 @@ class MainActivity : AppCompatActivity() {
             if (isInstalled) {
                 wsRepo.uninstallFromWorkspace(ws.userId, item.packageName) { ok, msg ->
                     runOnUiThread {
-                        layoutProgress.visibility = View.GONE
+                        layoutProgress.isVisible = false
                         btnInstall.isEnabled      = true
                         if (ok) {
                             refreshRow(false)
                             updateAllWorkspaceStatuses()
                         } else {
-                            Toast.makeText(this, "Failed: $msg", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this, getString(R.string.failed_generic, msg), Toast.LENGTH_LONG).show()
                             refreshRow(isInstalled)
                         }
                     }
@@ -678,13 +719,13 @@ class MainActivity : AppCompatActivity() {
                 val doInstall = {
                     wsRepo.installToWorkspace(ws.userId, item.packageName) { ok, msg ->
                         runOnUiThread {
-                            layoutProgress.visibility = View.GONE
+                            layoutProgress.isVisible = false
                             btnInstall.isEnabled      = true
                             if (ok) {
                                 refreshRow(true)
                                 updateAllWorkspaceStatuses()
                             } else {
-                                Toast.makeText(this, "Failed: $msg", Toast.LENGTH_LONG).show()
+                                Toast.makeText(this, getString(R.string.failed_generic, msg), Toast.LENGTH_LONG).show()
                                 btnInstall.isEnabled = true
                             }
                         }

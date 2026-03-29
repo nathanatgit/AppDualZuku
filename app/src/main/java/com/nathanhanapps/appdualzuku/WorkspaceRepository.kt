@@ -9,17 +9,23 @@ class WorkspaceRepository(private val shell: ShellClient) {
     }
 
     /**
-     * Creates a managed profile cloned from user 0.
-     * Returns (success, newUserId, rawOutput).
-     * newUserId is -1 on failure.
+     * Creates a profile cloned from user 0.
+     * [type] can be "managed" or "clone".
      */
-    fun createWorkspace(name: String, callback: (Boolean, Int, String) -> Unit) {
+    fun createWorkspace(name: String, type: String = "managed", callback: (Boolean, Int, String) -> Unit) {
         val safe = name.replace("\"", "").trim()
-        shell.execWhenReady("pm create-user --profileOf 0 --managed \"$safe\"") { output ->
+        val cmd = if (type == "clone") {
+            "pm create-user --profileOf 0 --user-type android.os.usertype.profile.CLONE \"$safe\""
+        } else {
+            "pm create-user --profileOf 0 --managed \"$safe\""
+        }
+        
+        shell.execWhenReady(cmd) { output ->
             // Typical success line: "Success: created user id 15"
             val userId = Regex("""created user id (\d+)""", RegexOption.IGNORE_CASE)
                 .find(output)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: -1
-            val success = output.contains("Success", ignoreCase = true) && userId > 0
+            
+            val success = output.contains("Success", ignoreCase = true) && userId != -1
             callback(success, userId, output)
         }
     }
@@ -76,10 +82,10 @@ class WorkspaceRepository(private val shell: ShellClient) {
     }
 
     /** Suggests "Work1", "Work2", etc. avoiding names already taken. */
-    fun suggestName(existing: List<WorkspaceInfo>): String {
+    fun suggestName(existing: List<WorkspaceInfo>, prefix: String = "Work"): String {
         val taken = existing.filter { !it.isMainUser }.map { it.name }.toSet()
         var i = 1
-        while ("Work$i" in taken) i++
-        return "Work$i"
+        while ("$prefix$i" in taken) i++
+        return "$prefix$i"
     }
 }

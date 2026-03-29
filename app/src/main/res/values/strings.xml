@@ -1,6 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">AppDualZuku</string>
-    <string name="app_name_version" translatable="false">AppDualZuku v2.0</string>
+    <string name="app_name_version" translatable="false">%1$s v%2$s</string>
 
     <!-- App list chips -->
     <string name="main_only">Main only</string>
@@ -16,8 +17,10 @@
 
     <!-- Workspace management -->
     <string name="managed_workspaces">Managed Workspaces</string>
-    <string name="workspaces_description">Create isolated Android user profiles to run duplicate copies of any app.</string>
-    <string name="create_workspace">Create Workspace</string>
+    <string name="workspaces_description">Create Android user profiles to run duplicate copies of any app.</string>
+    <string name="workspaces_notice"><b>Managed:</b> Traditional work profiles (isolated settings/store/storage/etc.). \n<b>Cloned:</b> Lightweight profiles optimized for Dual Apps (Shared, May not work in some devices).</string>
+    <string name="create_workspace">Managed</string>
+    <string name="create_clone_workspace">Cloned</string>
     <string name="refresh">Refresh</string>
     <string name="no_workspaces_info">No managed workspaces yet.\nTap "Create Workspace" to add one.</string>
     <string name="remove_workspace_title">Remove Workspace</string>
@@ -47,20 +50,42 @@
 
     <!-- Shizuku -->
     <string name="shi_not_run">Shizuku not running! Please start Shizuku first.</string>
-    <string name="shizuku_required">Shizuku permission required</string>
-
-    <!-- Legacy (kept for compatibility) -->
-    <string name="install_to_dual_space_user_999">Install to Dual Space (User 999)</string>
-    <string name="remove_from_dual_space">Remove from Dual Space</string>
-    <string name="launch_app_dual">Launch App (Dual)</string>
-    <string name="launch_app">Launch App</string>
-    <string name="open_app_info_dual">Open App info (Dual)</string>
-    <string name="open_app_info_main">Open App info (Main)</string>
-    <string name="coming_soon">More settings coming soon…</string>
+    <string name="shizuku_required">Shizuku permission required!</string>
+    <string name="shizuku_granted">Shizuku permission granted!</string>
 
     <!-- Developer console -->
     <string name="dev_cmd_hint">Enter ADB / shell command…</string>
     <string name="dev_run">Run</string>
     <string name="dev_clear">Clear</string>
     <string name="dev_output_hint">Output will appear here…</string>
+    <string name="error_shizuku_not_init">ERROR: Shizuku shell not initialized</string>
+    <string name="dev_running_cmd">Running: %1$s …</string>
+    <string name="dev_console_unlocked">🛠 Developer console unlocked</string>
+    <string name="dev_remaining_taps">%1$d more tap%2$s to unlock dev console</string>
+    <string name="dev_no_output">(no output)</string>
+    <string name="dev_output_format" translatable="false">$ %1$s\n%2$s\n%3$s</string>
+
+    <!-- Filters -->
+    <string name="filter_all">All</string>
+    <string name="filter_in_workspace">In workspace</string>
+    <string name="filter_user">User</string>
+    <string name="filter_main_only">Main only</string>
+
+    <!-- Toasts and Errors -->
+    <string name="error_initializing">Error initializing: %1$s</string>
+    <string name="error_loading_apps">Error loading apps: %1$s</string>
+    <string name="creating_workspace_toast">Creating workspace \"%1$s\"…</string>
+    <string name="workspace_created_toast">Workspace \"%1$s\" created (User %2$d)</string>
+    <string name="failed_to_create_workspace">Failed to create workspace: %1$s</string>
+    <string name="removing_workspace_toast">Removing workspace \"%1$s\"…</string>
+    <string name="workspace_removed_toast">Workspace removed</string>
+    <string name="starting_workspace_toast">Starting \"%1$s\"…</string>
+    <string name="stopping_workspace_toast">Stopping \"%1$s\"…</string>
+    <string name="no_launcher_found">No launcher activity found</string>
+    <string name="launch_failed">Launch failed: %1$s</string>
+    <string name="failed_generic">Failed: %1$s</string>
+    <string name="app_title_format">"AppDualZuku\n(%1$s: %2$d·  Workspaces: %3$d)  "</string>
+    <string name="filter_system">System</string>
+    <string name="all">All</string>
+    <string name="developer_console">⚙ Developer Console</string>
 </resources>

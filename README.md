@@ -21,19 +21,14 @@ Always back up your files before performing any workspace‑related operations. 
 1. **Shizuku:** Ensure the [Shizuku](https://shizuku.rikka.app/) service is running and authorized.
 2. **Permissions:** Grant the app Shizuku permissions when prompted.
 3. **Management:** Use the **Settings** tab to create a new profile (Managed/Clone).
-4. **Navigation:** Use the bottom navigation to toggle between User apps, System apps, and Workspace settings.
 
-## 🛠 Tech Stack
-- **Language:** Kotlin
-- **UI:** XML with ViewBinding & Material 3 (Transitioning to Jetpack Compose)
-- **API:** Shizuku API (rikka.shizuku)
-- **Concurrency:** Java Executors (SingleThreadExecutor) for smooth background processing.
+    (**Note:** Managed space is an isolated environment from main user while cloned space using shared storage. Cloned space may not work in all devices.)
+
+5. **Navigation:** Use the bottom navigation to toggle between User apps, System apps, and Workspace settings.
 
 ## 📸 Screenshots
-![Screenshot_20260401_171810](https://github.com/user-attachments/assets/47bbcf08-15c2-4b4c-9f6c-b4eec25f3929)
-![Screenshot_20260401_171816](https://github.com/user-attachments/assets/3ee8d246-3adf-49c2-8d5a-ed8bf7c4b8f0)
-
-
+<img src="https://github.com/user-attachments/assets/47bbcf08-15c2-4b4c-9f6c-b4eec25f3929" width="400" alt="Screenshot_20260401_171810">
+<img src="https://github.com/user-attachments/assets/3ee8d246-3adf-49c2-8d5a-ed8bf7c4b8f0" width="400" alt="Screenshot_20260401_171816">
 
 ## ⚖️ License
 This project is licensed under the GNU General Public License v3.0 (GPLv3).

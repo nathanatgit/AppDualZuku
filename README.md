@@ -1,52 +1,41 @@
-# A multi‑instance app manager powered by Shizuku
+# AppDualZuku
+A multi‑instance app manager powered by **Shizuku**.
 
 ## Overview
+AppDualZuku is a lightweight utility that leverages Shizuku privileges to manage Android workspaces (Managed Profiles). It allows you to create isolated environments for apps, enabling multiple parallel installations of the same application without heavy virtualization or root access.
 
-This lightweight Android tool uses Shizuku privileges to execute adb‑level commands safely and conveniently.
-It allows you to create multiple isolated app workspaces, enabling parallel installations of the same application without cloning frameworks or heavy virtualization.
+## ✨ Features
+- **🔧 Shizuku-Powered:** Performs elevated system actions (user management) safely without root.
+- **🏗️ Workspace Management:** Easily create, start, or remove "Managed" or "Clone" profiles via a dedicated settings interface.
+- **🔍 Advanced Filtering:** Search and filter apps by System, User, or Workspace status using a modern chip-based UI.
+- **💻 Developer Console:** A hidden shell executor for power users to run direct commands via Shizuku (Unlocked by tapping 'About' 5 times).
+- **🎨 Material 3 Design:** Full support for Dynamic Colors, smooth Shimmer loading effects, and edge-to-edge UI.
 
 ## ⚠️ Important Warning / 重要提醒
+Always back up your files before performing any workspace‑related operations. Creating or removing managed workspaces involves Android’s multi‑user system; unexpected behavior from OEM restrictions may lead to data loss.
+**Proceed only if you understand the risks.**
 
-Always back up your files before performing any workspace‑related operations.
+在进行任何与工作空间相关的操作之前，请务必备份。创建或删除工作空间涉及 Android 多用户系统，某些 OEM 限制可能导致数据丢失风险。**请在充分了解风险并完成备份后再继续。**
 
-Creating or removing managed workspaces involves Android’s multi‑user system, and unexpected behavior from OEM restrictions or system bugs may lead to data loss for apps installed in those workspaces.
+## 🚀 Getting Started
+1. **Shizuku:** Ensure the [Shizuku](https://shizuku.rikka.app/) service is running and authorized.
+2. **Permissions:** Grant the app Shizuku permissions when prompted.
+3. **Management:** Use the **Settings** tab to create a new profile (Managed/Clone).
+4. **Navigation:** Use the bottom navigation to toggle between User apps, System apps, and Workspace settings.
 
-**Proceed only if you understand the risks and have backed up important data.**
+## 🛠 Tech Stack
+- **Language:** Kotlin
+- **UI:** XML with ViewBinding & Material 3 (Transitioning to Jetpack Compose)
+- **API:** Shizuku API (rikka.shizuku)
+- **Concurrency:** Java Executors (SingleThreadExecutor) for smooth background processing.
 
-在进行任何与工作空间相关的操作之前，请务必备份你的重要文件。
+## 📸 Screenshots
+![Screenshot_20260401_171810](https://github.com/user-attachments/assets/47bbcf08-15c2-4b4c-9f6c-b4eec25f3929)
+![Screenshot_20260401_171816](https://github.com/user-attachments/assets/3ee8d246-3adf-49c2-8d5a-ed8bf7c4b8f0)
 
-创建或删除工作空间会涉及 Android 多用户系统。
 
-由于不同厂商的系统限制或潜在的系统异常，工作空间中的应用数据可能会出现丢失风险。
 
-**请在充分了解风险并完成数据备份后再继续操作。**
-
-## Features
-- 🔧 Shizuku‑powered elevated operations
-- 📦 Create multiple managed workspaces (not just dual apps anymore)
-- 🖥️ Install and manage multiple instances of the same app
-- 🪄 Simple GUI workflow — no manual adb commands required
-- 🚀 lightweight, and no root needed
-
-## Requirements
-- Shizuku service running and authorized
-- Android device with multi‑user support
-- Basic understanding of adb concepts (optional, but helpful)
-
-## How It Works
-The app creates additional Android user profiles (workspaces) and installs selected apps into them.
-Each workspace behaves like an isolated environment, allowing multiple independent instances of the same app.
-
-## Limitations
-- Some OEM‑restricted devices may limit multi‑user functionality
-- More advanced workspace controls may be added in future updates
-
-## Screenshots
-![Screenshot_2026-01-20-23-43-48-095_com nathanhanapps appdualzuku](https://github.com/user-attachments/assets/9ce69d11-6b64-44f8-966a-d45c5271c846)
-
-## License
+## ⚖️ License
 This project is licensed under the GNU General Public License v3.0 (GPLv3).
 You may copy, distribute, and modify the software as long as modifications are documented and remain under GPLv3.
 For the full license text, please search for the GNU GPL v3.0.
-
-

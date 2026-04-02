@@ -21,7 +21,7 @@ Always back up your files before performing any workspace‑related operations. 
    
 2. **Permissions:** Grant the app Shizuku permissions when prompted.
    
-3. **Management:** Use the **Settings** tab to create a new profile (Managed/Clone) if not exist. Or you can editing packages in an existing workspace.
+3. **Management:** Use the **Settings** tab to create a new profile (Managed/Clone) if not exist, or you can edit packages in an existing workspace.
 
     (**Note:** Managed space is an isolated environment from main user while cloned space using shared storage. Cloned space may not work in all devices.)
 

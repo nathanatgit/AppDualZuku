@@ -415,7 +415,7 @@ class MainActivity : AppCompatActivity() {
             val appName = getString(R.string.app_name)
             binding.tvAppVersion.text = getString(R.string.app_name_version, appName, version)
         } catch (e: Exception) {
-            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.4.1")
+            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.4.2")
         }
     }
 
@@ -893,6 +893,9 @@ class MainActivity : AppCompatActivity() {
                 chipWsInstalled.text = getString(if (installed) R.string.installed else R.string.not_installed)
                 chipWsInstalled.isChecked = installed
                 btnWsInstallToggle.text = getString(if (installed) R.string.uninstall else R.string.install)
+                btnWsInstallToggle.setIconResource(
+                    if (installed) android.R.drawable.ic_menu_delete else android.R.drawable.ic_input_add
+                )
                 btnWsLaunch.isEnabled = installed && running
                 btnWsAppInfo.isEnabled = installed
             }
@@ -1209,8 +1212,14 @@ class MainActivity : AppCompatActivity() {
             // cached main-space view) so the diff is correct, and so the total job count -
             // and therefore the N/Total progress below - is known up front.
             collectCloneJobs(workspaceIds, 0, packages, mutableListOf()) { jobs ->
-                val phase = getString(R.string.batch_cloning)
-                updateBatchProgressText(sheetBinding, phase, 0, jobs.size)
+                // This callback chain runs on the shell client's background executor, not
+                // the main thread - touching a view directly here throws
+                // CalledFromWrongThreadException (intermittently, depending on view
+                // attachment timing), unlike the synchronous initial progress text set at
+                // the top of runCloneOperation which runs on the UI thread already.
+                runOnUiThread {
+                    updateBatchProgressText(sheetBinding, getString(R.string.batch_cloning), 0, jobs.size)
+                }
                 runCloneJobsSequentially(jobs, 0, installed = 0, uninstalled = 0, skipped = 0, cancelled, sheetBinding) { i, u, s ->
                     runOnUiThread {
                         sheetBinding.layoutBatchProgress.isVisible = false
@@ -1339,7 +1348,11 @@ class MainActivity : AppCompatActivity() {
                     invalidateOptionsMenu()
                     adapter.setSelectedPackages(matched)
                     Toast.makeText(this, getString(R.string.batch_import_success, matched.size, notFound), Toast.LENGTH_LONG).show()
+                    // Reopen (not just dismiss) so the sheet's header count and its button
+                    // closures pick up the freshly-imported selection instead of the stale
+                    // one captured when the sheet was first opened.
                     batchDialog?.dismiss()
+                    showBatchActionsBottomSheet()
                 }
             } catch (e: Exception) {
                 runOnUiThread {

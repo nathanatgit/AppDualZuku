@@ -85,6 +85,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/uninstall"
+                app:icon="@android:drawable/ic_menu_delete"
                 style="@style/Widget.Material3.Button.TonalButton" />
 
         </LinearLayout>

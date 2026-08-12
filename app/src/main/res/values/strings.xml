@@ -124,6 +124,7 @@
     <string name="batch_no_workspace_selected">Select at least one target space first!</string>
     <string name="batch_installing">Installing…</string>
     <string name="batch_uninstalling">Uninstalling…</string>
+    <string name="batch_progress_format">%1$s (%2$d/%3$d)</string>
     <string name="batch_install_summary">Installed %1$d, skipped %2$d (already present)</string>
     <string name="batch_uninstall_summary">Uninstalled %1$d, skipped %2$d (not present or blocked)</string>
     <string name="batch_export_success">Exported %1$d package(s)</string>
@@ -139,5 +140,6 @@
     <string name="continue_anyway">Continue Anyway</string>
     <string name="clone_reference_list_prompt">Please check (including but not limited to) whether the following apps are selected:\n\n%1$s</string>
     <string name="batch_cloning">Cloning…</string>
+    <string name="batch_clone_preparing">Reading current workspace app lists…</string>
     <string name="batch_clone_summary">Installed %1$d, uninstalled %2$d, skipped %3$d</string>
 </resources>

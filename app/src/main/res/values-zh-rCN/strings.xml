@@ -45,7 +45,7 @@
     <string name="error_shizuku_not_init">错误：Shizuku 未初始化</string>
     <string name="dev_running_cmd">正在运行：%1$s ……</string>
     <string name="dev_console_unlocked">🛠 开发者终端已解锁</string>
-    <string name="dev_remaining_taps">再按%1$d次解锁 Shell 终端%2$s</string>
+    <string name="dev_remaining_taps">再按%1$d次解锁 Shell 终端</string>
     <string name="dev_no_output">（无输出）</string>
     <string name="filter_all">所有</string>
     <string name="filter_in_workspace">在工作空间</string>
@@ -97,6 +97,7 @@
     <string name="batch_no_workspace_selected">请先选择至少一个目标空间！</string>
     <string name="batch_installing">正在安装……</string>
     <string name="batch_uninstalling">正在卸载……</string>
+    <string name="batch_progress_format">%1$s（%2$d/%3$d）</string>
     <string name="batch_install_summary">已安装 %1$d 个，跳过 %2$d 个（已存在）</string>
     <string name="batch_uninstall_summary">已卸载 %1$d 个，跳过 %2$d 个（未安装或被拒绝）</string>
     <string name="batch_export_success">已导出 %1$d 个应用</string>
@@ -112,5 +113,6 @@
     <string name="continue_anyway">仍然继续</string>
     <string name="clone_reference_list_prompt">请检查（包括但不限于）以下应用是否勾选：\n\n%1$s</string>
     <string name="batch_cloning">正在克隆……</string>
+    <string name="batch_clone_preparing">正在读取工作空间当前应用列表……</string>
     <string name="batch_clone_summary">已安装 %1$d 个，已卸载 %2$d 个，跳过 %3$d 个</string>
 </resources>

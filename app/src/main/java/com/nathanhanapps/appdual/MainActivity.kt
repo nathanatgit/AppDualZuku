@@ -25,6 +25,7 @@ import com.nathanhanapps.appdual.databinding.DialogTappableMessageBinding
 import com.nathanhanapps.appdual.databinding.ItemWorkspaceActionBinding
 import rikka.shizuku.Shizuku
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.content.ContextCompat
 import android.os.Handler
@@ -378,6 +379,10 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.fabBatchActions.text = getString(R.string.batch_fab_selected, selected.size)
             binding.fabBatchActions.isVisible = true
+            // Setting .text alone doesn't re-layout an ExtendedFloatingActionButton that
+            // hasn't gone through an extend()/shrink() transition yet - without this it
+            // stays in its initial icon-only "shrunk" state and the text never shows.
+            binding.fabBatchActions.extend()
         }
     }
 
@@ -969,18 +974,33 @@ class MainActivity : AppCompatActivity() {
         fun selectedWorkspaceIds(): List<Int> =
             workspaceCheckBoxes.filter { it.second.isChecked }.map { it.first }
 
+        // Shared by whichever operation is currently running (only one can run at a time,
+        // since the action buttons are disabled while one is in progress).
+        val cancelled = AtomicBoolean(false)
+
         sheetBinding.btnBatchInstall.setOnClickListener {
-            performBatchOperation(install = true, selected.toList(), selectedWorkspaceIds(), sheetBinding)
+            cancelled.set(false)
+            performBatchOperation(install = true, selected.toList(), selectedWorkspaceIds(), sheetBinding, cancelled)
         }
         sheetBinding.btnBatchUninstall.setOnClickListener {
-            performBatchOperation(install = false, selected.toList(), selectedWorkspaceIds(), sheetBinding)
+            cancelled.set(false)
+            performBatchOperation(install = false, selected.toList(), selectedWorkspaceIds(), sheetBinding, cancelled)
         }
         sheetBinding.btnBatchClone.setOnClickListener {
-            confirmAndPerformClone(selected, selectedWorkspaceIds(), sheetBinding)
+            cancelled.set(false)
+            confirmAndPerformClone(selected, selectedWorkspaceIds(), sheetBinding, cancelled)
         }
         sheetBinding.btnBatchExport.setOnClickListener { showExportDialog(selected) }
         sheetBinding.btnBatchImport.setOnClickListener { importDocumentLauncher.launch(arrayOf("*/*")) }
-        sheetBinding.btnBatchCancel.setOnClickListener { dialog.dismiss() }
+        sheetBinding.btnBatchCancel.setOnClickListener {
+            if (sheetBinding.layoutBatchProgress.isVisible) {
+                // A batch op is running: stop queuing further jobs instead of just hiding the
+                // sheet, since the op previously kept running invisibly in the background.
+                cancelled.set(true)
+            } else {
+                dialog.dismiss()
+            }
+        }
 
         dialog.show()
     }
@@ -991,6 +1011,10 @@ class MainActivity : AppCompatActivity() {
         sheetBinding.btnBatchClone.isEnabled = enabled
         sheetBinding.btnBatchExport.isEnabled = enabled
         sheetBinding.btnBatchImport.isEnabled = enabled
+    }
+
+    private fun updateBatchProgressText(sheetBinding: BottomSheetBatchActionsBinding, phase: String, done: Int, total: Int) {
+        sheetBinding.tvBatchProgressText.text = getString(R.string.batch_progress_format, phase, done, total)
     }
 
     /**
@@ -1004,7 +1028,8 @@ class MainActivity : AppCompatActivity() {
         install: Boolean,
         packages: List<String>,
         workspaceIds: List<Int>,
-        sheetBinding: BottomSheetBatchActionsBinding
+        sheetBinding: BottomSheetBatchActionsBinding,
+        cancelled: AtomicBoolean
     ) {
         if (workspaceIds.isEmpty()) {
             Toast.makeText(this, getString(R.string.batch_no_workspace_selected), Toast.LENGTH_SHORT).show()
@@ -1023,12 +1048,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val phase = getString(if (install) R.string.batch_installing else R.string.batch_uninstalling)
         sheetBinding.layoutBatchProgress.isVisible = true
-        sheetBinding.tvBatchProgressText.setText(if (install) R.string.batch_installing else R.string.batch_uninstalling)
+        updateBatchProgressText(sheetBinding, phase, 0, jobs.size)
         setBatchButtonsEnabled(sheetBinding, false)
 
         fun runJobs() {
-            runBatchJobsSequentially(jobs, 0, install, successCount = 0, skippedCount = preSkipped) { success, skipped ->
+            runBatchJobsSequentially(jobs, 0, install, successCount = 0, skippedCount = preSkipped, cancelled, sheetBinding) { success, skipped ->
                 runOnUiThread {
                     sheetBinding.layoutBatchProgress.isVisible = false
                     setBatchButtonsEnabled(sheetBinding, true)
@@ -1065,17 +1091,24 @@ class MainActivity : AppCompatActivity() {
         install: Boolean,
         successCount: Int,
         skippedCount: Int,
+        cancelled: AtomicBoolean,
+        sheetBinding: BottomSheetBatchActionsBinding,
         onDone: (Int, Int) -> Unit
     ) {
-        if (index >= jobs.size) {
-            onDone(successCount, skippedCount)
+        if (index >= jobs.size || cancelled.get()) {
+            // Anything left un-run (including because the user cancelled) counts as skipped.
+            onDone(successCount, skippedCount + (jobs.size - index).coerceAtLeast(0))
             return
         }
         val (pkg, userId) = jobs[index]
         val callback: (Boolean, String) -> Unit = { success, _ ->
             val nextSuccess = successCount + if (success) 1 else 0
             val nextSkipped  = skippedCount + if (success) 0 else 1
-            runBatchJobsSequentially(jobs, index + 1, install, nextSuccess, nextSkipped, onDone)
+            runOnUiThread {
+                val phase = getString(if (install) R.string.batch_installing else R.string.batch_uninstalling)
+                updateBatchProgressText(sheetBinding, phase, index + 1, jobs.size)
+            }
+            runBatchJobsSequentially(jobs, index + 1, install, nextSuccess, nextSkipped, cancelled, sheetBinding, onDone)
         }
         if (install) {
             wsRepo.installToWorkspace(userId, pkg, callback)
@@ -1097,7 +1130,8 @@ class MainActivity : AppCompatActivity() {
     private fun confirmAndPerformClone(
         packages: Set<String>,
         workspaceIds: List<Int>,
-        sheetBinding: BottomSheetBatchActionsBinding
+        sheetBinding: BottomSheetBatchActionsBinding,
+        cancelled: AtomicBoolean
     ) {
         if (workspaceIds.isEmpty()) {
             Toast.makeText(this, getString(R.string.batch_no_workspace_selected), Toast.LENGTH_SHORT).show()
@@ -1105,9 +1139,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (selectionLooksLikeFullWorkspace(packages)) {
-            showCloneConfirmDialog(packages, workspaceIds, sheetBinding)
+            showCloneConfirmDialog(packages, workspaceIds, sheetBinding, cancelled)
         } else {
-            showIncompleteSelectionDialog { showCloneConfirmDialog(packages, workspaceIds, sheetBinding) }
+            showIncompleteSelectionDialog { showCloneConfirmDialog(packages, workspaceIds, sheetBinding, cancelled) }
         }
     }
 
@@ -1117,12 +1151,13 @@ class MainActivity : AppCompatActivity() {
     private fun showCloneConfirmDialog(
         packages: Set<String>,
         workspaceIds: List<Int>,
-        sheetBinding: BottomSheetBatchActionsBinding
+        sheetBinding: BottomSheetBatchActionsBinding,
+        cancelled: AtomicBoolean
     ) {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.clone_confirm_title)
             .setMessage(R.string.clone_confirm_message)
-            .setPositiveButton(R.string.clone_button) { _, _ -> runCloneOperation(packages, workspaceIds, sheetBinding) }
+            .setPositiveButton(R.string.clone_button) { _, _ -> runCloneOperation(packages, workspaceIds, sheetBinding, cancelled) }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
@@ -1157,77 +1192,86 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private data class CloneJob(val userId: Int, val isInstall: Boolean, val packageName: String)
+
     private fun runCloneOperation(
         packages: Set<String>,
         workspaceIds: List<Int>,
-        sheetBinding: BottomSheetBatchActionsBinding
+        sheetBinding: BottomSheetBatchActionsBinding,
+        cancelled: AtomicBoolean
     ) {
         sheetBinding.layoutBatchProgress.isVisible = true
-        sheetBinding.tvBatchProgressText.setText(R.string.batch_cloning)
+        sheetBinding.tvBatchProgressText.setText(R.string.batch_clone_preparing)
         setBatchButtonsEnabled(sheetBinding, false)
 
         startWorkspacesThenRun(workspaceIds) {
-            cloneWorkspacesSequentially(workspaceIds, 0, packages, installed = 0, uninstalled = 0, skipped = 0) { i, u, s ->
-                runOnUiThread {
-                    sheetBinding.layoutBatchProgress.isVisible = false
-                    setBatchButtonsEnabled(sheetBinding, true)
-                    Toast.makeText(this, getString(R.string.batch_clone_summary, i, u, s), Toast.LENGTH_LONG).show()
-                    updateAllWorkspaceStatuses()
+            // Fetch every target workspace's actual current package list first (not the
+            // cached main-space view) so the diff is correct, and so the total job count -
+            // and therefore the N/Total progress below - is known up front.
+            collectCloneJobs(workspaceIds, 0, packages, mutableListOf()) { jobs ->
+                val phase = getString(R.string.batch_cloning)
+                updateBatchProgressText(sheetBinding, phase, 0, jobs.size)
+                runCloneJobsSequentially(jobs, 0, installed = 0, uninstalled = 0, skipped = 0, cancelled, sheetBinding) { i, u, s ->
+                    runOnUiThread {
+                        sheetBinding.layoutBatchProgress.isVisible = false
+                        setBatchButtonsEnabled(sheetBinding, true)
+                        Toast.makeText(this, getString(R.string.batch_clone_summary, i, u, s), Toast.LENGTH_LONG).show()
+                        updateAllWorkspaceStatuses()
+                    }
                 }
             }
         }
     }
 
-    /** Fetches each workspace's actual current package list (not the cached main-space view) to diff correctly. */
-    private fun cloneWorkspacesSequentially(
+    private fun collectCloneJobs(
         workspaceIds: List<Int>,
         index: Int,
         packages: Set<String>,
-        installed: Int,
-        uninstalled: Int,
-        skipped: Int,
-        onDone: (Int, Int, Int) -> Unit
+        acc: MutableList<CloneJob>,
+        onCollected: (List<CloneJob>) -> Unit
     ) {
         if (index >= workspaceIds.size) {
-            onDone(installed, uninstalled, skipped)
+            onCollected(acc)
             return
         }
         val userId = workspaceIds[index]
         wsRepo.getInstalledPackages(userId) { currentPkgs ->
-            val jobs = (packages - currentPkgs).map { true to it } +   // install
-                       (currentPkgs - packages).map { false to it }    // uninstall (everything not selected)
-            runCloneJobsSequentially(userId, jobs, 0, installed, uninstalled, skipped) { i, u, s ->
-                cloneWorkspacesSequentially(workspaceIds, index + 1, packages, i, u, s, onDone)
-            }
+            (packages - currentPkgs).forEach { acc.add(CloneJob(userId, true, it)) }
+            (currentPkgs - packages).forEach { acc.add(CloneJob(userId, false, it)) }
+            collectCloneJobs(workspaceIds, index + 1, packages, acc, onCollected)
         }
     }
 
     private fun runCloneJobsSequentially(
-        userId: Int,
-        jobs: List<Pair<Boolean, String>>, // (isInstall, packageName)
+        jobs: List<CloneJob>,
         index: Int,
         installed: Int,
         uninstalled: Int,
         skipped: Int,
+        cancelled: AtomicBoolean,
+        sheetBinding: BottomSheetBatchActionsBinding,
         onDone: (Int, Int, Int) -> Unit
     ) {
-        if (index >= jobs.size) {
-            onDone(installed, uninstalled, skipped)
+        if (index >= jobs.size || cancelled.get()) {
+            onDone(installed, uninstalled, skipped + (jobs.size - index).coerceAtLeast(0))
             return
         }
-        val (isInstall, pkg) = jobs[index]
+        val job = jobs[index]
         val callback: (Boolean, String) -> Unit = { success, _ ->
             val (i, u, s) = when {
-                success && isInstall  -> Triple(installed + 1, uninstalled, skipped)
-                success && !isInstall -> Triple(installed, uninstalled + 1, skipped)
-                else                  -> Triple(installed, uninstalled, skipped + 1)
+                success && job.isInstall  -> Triple(installed + 1, uninstalled, skipped)
+                success && !job.isInstall -> Triple(installed, uninstalled + 1, skipped)
+                else                       -> Triple(installed, uninstalled, skipped + 1)
             }
-            runCloneJobsSequentially(userId, jobs, index + 1, i, u, s, onDone)
+            runOnUiThread {
+                updateBatchProgressText(sheetBinding, getString(R.string.batch_cloning), index + 1, jobs.size)
+            }
+            runCloneJobsSequentially(jobs, index + 1, i, u, s, cancelled, sheetBinding, onDone)
         }
-        if (isInstall) {
-            wsRepo.installToWorkspace(userId, pkg, callback)
+        if (job.isInstall) {
+            wsRepo.installToWorkspace(job.userId, job.packageName, callback)
         } else {
-            wsRepo.uninstallFromWorkspace(userId, pkg, callback)
+            wsRepo.uninstallFromWorkspace(job.userId, job.packageName, callback)
         }
     }
 

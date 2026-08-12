@@ -11,6 +11,7 @@
         android:id="@+id/ivIcon"
         android:layout_width="40dp"
         android:layout_height="40dp"
+        android:contentDescription="@string/app_icon"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
@@ -20,7 +21,7 @@
         android:id="@+id/tvLabel"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="App Name"
+        android:text="@string/app_name"
         android:textStyle="bold"
         android:textSize="16sp"
         android:ellipsize="end"
@@ -28,6 +29,7 @@
         app:layout_constraintStart_toEndOf="@id/ivIcon"
         app:layout_constraintEnd_toStartOf="@id/chipStatus"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_goneMarginEnd="40dp"
         android:layout_marginStart="12dp"/>
 
     <!-- Package name -->
@@ -35,22 +37,35 @@
         android:id="@+id/tvPkg"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="com.example.app"
+        android:text="@string/com_example_app"
         android:textSize="12sp"
         android:textColor="?android:textColorSecondary"
         android:ellipsize="end"
         android:maxLines="1"
         app:layout_constraintStart_toStartOf="@id/tvLabel"
         app:layout_constraintEnd_toEndOf="@id/tvLabel"
-        app:layout_constraintTop_toBottomOf="@id/tvLabel"/>
+        app:layout_constraintTop_toBottomOf="@id/tvLabel"
+        app:layout_goneMarginEnd="40dp"/>
 
-    <!-- Status chip -->
+    <!-- Status chip (hidden in batch-selection mode) -->
     <com.google.android.material.chip.Chip
         android:id="@+id/chipStatus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/main_only"
         app:chipMinHeight="28dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <!-- Selection checkbox (shown only in batch-selection mode) -->
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/cbSelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:clickable="false"
+        android:focusable="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>

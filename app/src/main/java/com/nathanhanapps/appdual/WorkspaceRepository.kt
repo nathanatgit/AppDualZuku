@@ -1,6 +1,6 @@
-package com.nathanhanapps.appdualzuku
+package com.nathanhanapps.appdual
 
-class WorkspaceRepository(private val shell: ShellClient) {
+class WorkspaceRepository(private val shell: IShellExecutor) {
 
     fun listWorkspaces(callback: (List<WorkspaceInfo>) -> Unit) {
         shell.execWhenReady("pm list users") { output ->

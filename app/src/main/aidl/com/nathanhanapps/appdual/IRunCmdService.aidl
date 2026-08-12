@@ -1,4 +1,4 @@
-package com.nathanhanapps.appdualzuku;
+package com.nathanhanapps.appdual;
 
 interface IRunCmdService {
     String run(String cmd);

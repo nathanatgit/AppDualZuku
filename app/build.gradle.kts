@@ -3,15 +3,15 @@ plugins {
 }
 
 android {
-    namespace = "com.nathanhanapps.appdualzuku"
+    namespace = "com.nathanhanapps.appdual"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.nathanhanapps.appdualzuku"
+        applicationId = "com.nathanhanapps.appdual"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.2"
+        versionCode = 2
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

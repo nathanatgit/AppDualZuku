@@ -1,4 +1,4 @@
-package com.nathanhanapps.appdualzuku
+package com.nathanhanapps.appdual
 
 import android.content.ComponentName
 import android.content.Context
@@ -10,7 +10,7 @@ import rikka.shizuku.Shizuku.UserServiceArgs
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 
-class ShellClient(private val context: Context) {
+class ShellClient(private val context: Context) : IShellExecutor {
     @Volatile
     private var service: IRunCmdService? = null
     @Volatile
@@ -77,7 +77,7 @@ class ShellClient(private val context: Context) {
         }
     }
 
-    fun unbind() {
+    override fun unbind() {
         DebugLog.trace(context, "ShellClient.unbind() called")
 
         if (service != null || binding) {
@@ -98,7 +98,7 @@ class ShellClient(private val context: Context) {
     }
 
     /** Always calls callback. If not connected yet, queues and waits. */
-    fun execWhenReady(cmd: String, callback: (String) -> Unit) {
+    override fun execWhenReady(cmd: String, callback: (String) -> Unit) {
         DebugLog.trace(context, "execWhenReady: cmd=$cmd serviceNull=${service == null} binding=$binding")
 
         // If already connected, run now
@@ -175,6 +175,8 @@ class ShellClient(private val context: Context) {
         DebugLog.trace(context, "isServiceConnected(): $connected")
         return connected
     }
+
+    override fun isReady(): Boolean = isServiceConnected()
 
     fun isBinding(): Boolean {
         return binding

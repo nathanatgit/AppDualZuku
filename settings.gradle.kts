@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AppDualZuku"
+rootProject.name = "AppDual"
 include(":app")

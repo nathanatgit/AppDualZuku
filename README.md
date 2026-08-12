@@ -1,10 +1,10 @@
-# AppDualZuku
-A multi‑instance app manager powered by **Shizuku**.
+# AppDual
+A multi‑instance app manager powered by **Shizuku** or **root**.
 
 ## Overview
-AppDualZuku is a lightweight utility that uses Shizuku privileges to manage Android workspaces (Managed Profiles).
+AppDual is a lightweight utility that uses Shizuku or root privileges to manage Android workspaces (Managed Profiles).
 
-It allows you to create isolated or shared environments for apps, enabling multiple parallel installations of the same application without heavy virtualization or root access.
+It allows you to create isolated or shared environments for apps, enabling multiple parallel installations of the same application without heavy virtualization.
 
 ## ⚠️ Important Warning
 

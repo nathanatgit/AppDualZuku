@@ -1,4 +1,4 @@
-package com.nathanhanapps.appdualzuku
+package com.nathanhanapps.appdual
 
 import android.view.LayoutInflater
 import android.view.View
@@ -38,13 +38,14 @@ class WorkspaceAdapter(
         private val btnRemove:    MaterialButton = itemView.findViewById(R.id.btnWsRemove)
 
         fun bind(ws: WorkspaceInfo) {
+            val ctx = itemView.context
             tvName.text = ws.displayName
-            tvMeta.text = "User ID: ${ws.userId}  ·  Flags: 0x${ws.flags.toString(16).uppercase()}"
+            tvMeta.text = ctx.getString(R.string.workspace_meta_format, ws.userId, ws.flags)
 
-            chipRunning.text      = if (ws.isRunning) "Running" else "Stopped"
+            chipRunning.text      = if (ws.isRunning) ctx.getString(R.string.running) else ctx.getString(R.string.stopped)
             chipRunning.isChecked = ws.isRunning
 
-            btnStartStop.text = if (ws.isRunning) "Stop" else "Start"
+            btnStartStop.text = if (ws.isRunning) ctx.getString(R.string.stop_button) else ctx.getString(R.string.start_button)
             btnStartStop.setOnClickListener { if (ws.isRunning) onStop(ws) else onStart(ws) }
             btnRemove.setOnClickListener { onRemove(ws) }
         }

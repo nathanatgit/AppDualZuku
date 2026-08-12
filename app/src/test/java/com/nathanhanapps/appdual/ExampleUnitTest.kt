@@ -1,4 +1,4 @@
-package com.nathanhanapps.appdualzuku
+package com.nathanhanapps.appdual
 
 import org.junit.Test
 

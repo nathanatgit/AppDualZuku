@@ -23,7 +23,7 @@
                 android:id="@+id/ivAppIcon"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:contentDescription="App Icon" />
+                android:contentDescription="@string/app_icon" />
 
             <LinearLayout
                 android:layout_width="0dp"

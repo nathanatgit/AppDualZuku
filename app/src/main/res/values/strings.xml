@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">AppDualZuku</string>
+    <string name="app_name" translatable="false">AppDual</string>
     <string name="app_name_version" translatable="false">%1$s v%2$s</string>
 
     <!-- App list chips -->
@@ -13,7 +13,7 @@
 
     <!-- Settings -->
     <string name="settings_about">About</string>
-    <string name="about_AppDualZuku">Manage duplicate apps across managed workspaces using Shizuku</string>
+    <string name="about_AppDualZuku">Manage duplicate apps across managed workspaces using Shizuku or root</string>
 
     <!-- Workspace management -->
     <string name="managed_workspaces">Managed Workspaces</string>
@@ -25,6 +25,9 @@
     <string name="no_workspaces_info">No managed workspaces yet.\nTap "Create Workspace" to add one.</string>
     <string name="remove_workspace_title">Remove Workspace</string>
     <string name="remove_workspace_confirm">Remove "%1$s" (User %2$d)?\n\nAll apps and data in this workspace will be permanently deleted.</string>
+    <string name="workspace_user_label">%1$s  (User %2$d)</string>
+    <string name="workspace_user_label_stopped">%1$s  (User %2$d · %3$s)</string>
+    <string name="workspace_meta_format">User ID: %1$d  ·  Flags: 0x%2$X</string>
 
     <!-- Bottom sheet workspace rows -->
     <string name="workspaces">Workspaces</string>
@@ -53,6 +56,16 @@
     <string name="shi_not_run">Shizuku not running! Please start Shizuku first.</string>
     <string name="shizuku_required">Shizuku permission required!</string>
     <string name="shizuku_granted">Shizuku permission granted!</string>
+
+    <!-- Execution mode (root) -->
+    <string name="execution_mode">Execution Mode</string>
+    <string name="execution_mode_description">Choose how AppDual runs pm/am commands.</string>
+    <string name="use_root_switch">Use Root (su)</string>
+    <string name="root_checking">Checking for root…</string>
+    <string name="root_detected_yes">Root detected on this device</string>
+    <string name="root_detected_no">Root not detected — falls back to Shizuku</string>
+    <string name="root_required">Root access required or was denied!</string>
+    <string name="root_unavailable">Root access unavailable or denied. Falling back to Shizuku.</string>
 
     <!-- Developer console -->
     <string name="dev_cmd_hint">Enter ADB / shell command…</string>
@@ -85,8 +98,46 @@
     <string name="no_launcher_found">No launcher activity found</string>
     <string name="launch_failed">Launch failed: %1$s</string>
     <string name="failed_generic">Failed: %1$s</string>
-    <string name="app_title_format">"AppDualZuku\n(%1$s: %2$d·Workspaces: %3$d)  "</string>
+    <string name="app_title_format">"AppDual\n%1$s: %2$d·Workspaces: %3$d  "</string>
     <string name="filter_system">System</string>
     <string name="all">All</string>
     <string name="developer_console">⚙ Developer Console</string>
+    <string name="start_button">Start</string>
+    <string name="stop_button">Stop</string>
+    <string name="running">Running</string>
+    <string name="app_icon">App Icon</string>
+    <string name="com_example_app">com.example.app</string>
+
+    <!-- Batch management -->
+    <string name="batch_manage">Batch Manage</string>
+    <string name="select_all">Select All</string>
+    <string name="invert_selection">Invert Selection</string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="batch_selected_count">%1$d app(s) selected</string>
+    <string name="batch_fab_selected">%1$d selected</string>
+    <string name="target_spaces">Target Spaces</string>
+    <string name="import_list">Import List</string>
+    <string name="export_list">Export List</string>
+    <string name="export_dialog_title">Export App List</string>
+    <string name="export_dialog_hint">File name</string>
+    <string name="save">Save</string>
+    <string name="batch_no_workspace_selected">Select at least one target space first!</string>
+    <string name="batch_installing">Installing…</string>
+    <string name="batch_uninstalling">Uninstalling…</string>
+    <string name="batch_install_summary">Installed %1$d, skipped %2$d (already present)</string>
+    <string name="batch_uninstall_summary">Uninstalled %1$d, skipped %2$d (not present or blocked)</string>
+    <string name="batch_export_success">Exported %1$d package(s)</string>
+    <string name="batch_export_failed">Export failed: %1$s</string>
+    <string name="batch_import_success">Selected %1$d installed app(s) from the list (%2$d not found on this device)</string>
+    <string name="batch_import_failed">Import failed: %1$s</string>
+
+    <string name="clone_button">Clone</string>
+    <string name="clone_confirm_title">Confirm Clone</string>
+    <string name="clone_confirm_message">This will uninstall every app in the target space(s) that isn\'t in your current selection — which may include system apps — leaving only the selected list installed. This can\'t be undone. Continue?</string>
+    <string name="clone_incomplete_selection_title">Selection Looks Incomplete</string>
+    <string name="clone_incomplete_selection_message">The current selection doesn\'t look like a full workspace app list — it may be missing some packages the workspace needs to keep working. Cloning now could delete something essential from the target space(s).</string>
+    <string name="continue_anyway">Continue Anyway</string>
+    <string name="clone_reference_list_prompt">Please check (including but not limited to) whether the following apps are selected:\n\n%1$s</string>
+    <string name="batch_cloning">Cloning…</string>
+    <string name="batch_clone_summary">Installed %1$d, uninstalled %2$d, skipped %3$d</string>
 </resources>

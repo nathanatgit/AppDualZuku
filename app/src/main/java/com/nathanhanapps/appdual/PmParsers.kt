@@ -1,4 +1,4 @@
-//package com.nathanhanapps.appdualzuku
+//package com.nathanhanapps.appdual
 //
 //object PmParsers {
 //
@@ -15,7 +15,7 @@
 //        return set
 //    }
 //}
-package com.nathanhanapps.appdualzuku
+package com.nathanhanapps.appdual
 
 object PmParsers {
 

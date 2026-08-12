@@ -2,6 +2,7 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
@@ -35,16 +36,34 @@
                 android:orientation="vertical"
                 android:visibility="visible">
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chipDualFilter"
-                    style="@style/Widget.Material3.Chip.Filter"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/all"
-                    app:chipIcon="@android:drawable/ic_menu_sort_by_size" />
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipDualFilter"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/all"
+                        app:chipIcon="@android:drawable/ic_menu_sort_by_size" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipBatchMode"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/batch_manage"
+                        app:chipIcon="@android:drawable/ic_menu_agenda" />
+
+                </LinearLayout>
 
                 <FrameLayout
                     android:id="@+id/appsListContainer"
@@ -71,26 +90,29 @@
                         android:paddingBottom="80dp"
                         app:shimmer_auto_start="false">
 
+                        <!-- Populated at runtime with just enough rows to cover the screen; see populateSkeletonList() -->
                         <LinearLayout
                             android:id="@+id/skeletonList"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
                             android:paddingTop="4dp"
-                            android:paddingBottom="4dp">
-
-                            <include layout="@layout/item_app_skeleton" />
-                            <include layout="@layout/item_app_skeleton" />
-                            <include layout="@layout/item_app_skeleton" />
-                            <include layout="@layout/item_app_skeleton" />
-                            <include layout="@layout/item_app_skeleton" />
-                            <include layout="@layout/item_app_skeleton" />
-                            <include layout="@layout/item_app_skeleton" />
-                            <include layout="@layout/item_app_skeleton" />
-
-                        </LinearLayout>
+                            android:paddingBottom="4dp" />
 
                     </com.facebook.shimmer.ShimmerFrameLayout>
+
+                    <!-- Batch-selection action FAB -->
+                    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+                        android:id="@+id/fabBatchActions"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="96dp"
+                        android:visibility="gone"
+                        app:icon="@drawable/ic_edit"
+                        app:iconTint="?attr/colorOnSurfaceVariant"
+                        tools:text="3 selected" />
 
                 </FrameLayout>
 
@@ -152,6 +174,78 @@
                                 android:textSize="12sp"
                                 android:textColor="?android:textColorSecondary"
                                 android:layout_marginTop="4dp" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- ── Execution mode card ─────────────────────── -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardExecutionMode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:cardElevation="1dp"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/execution_mode"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="?android:textColorPrimary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/execution_mode_description"
+                                android:textSize="12sp"
+                                android:textColor="?android:textColorSecondary"
+                                android:layout_marginTop="4dp"
+                                android:layout_marginBottom="12dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/use_root_switch"
+                                        android:textSize="14sp"
+                                        android:textColor="?android:textColorPrimary" />
+
+                                    <TextView
+                                        android:id="@+id/tvRootStatus"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/root_checking"
+                                        android:textSize="11sp"
+                                        android:textColor="?android:textColorSecondary" />
+
+                                </LinearLayout>
+
+                                <com.google.android.material.materialswitch.MaterialSwitch
+                                    android:id="@+id/switchUseRoot"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+
+                            </LinearLayout>
 
                         </LinearLayout>
 

@@ -1,8 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Dark theme -->
-    <style name="Base.Theme.AppDualZuku" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.AppDual" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
-    <style name="Theme.AppDualZuku" parent="Base.Theme.AppDualZuku" />
+    <style name="Theme.AppDual" parent="Base.Theme.AppDual" />
 </resources>

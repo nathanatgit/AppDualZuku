@@ -32,7 +32,7 @@
             style="@style/Widget.Material3.Chip.Filter"
             app:chipMinHeight="24dp"
             android:textSize="11sp"
-            android:text="Not installed"
+            android:text="@string/not_installed"
             android:checkable="false" />
 
     </LinearLayout>

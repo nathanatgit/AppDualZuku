@@ -1,20 +1,28 @@
-package com.nathanhanapps.appdualzuku
+package com.nathanhanapps.appdual
 
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
+import android.view.MenuItem
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.nathanhanapps.appdualzuku.databinding.ActivityMainBinding
-import com.nathanhanapps.appdualzuku.databinding.BottomSheetAppActionsBinding
-import com.nathanhanapps.appdualzuku.databinding.ItemWorkspaceActionBinding
+import com.nathanhanapps.appdual.databinding.ActivityMainBinding
+import com.nathanhanapps.appdual.databinding.BottomSheetAppActionsBinding
+import com.nathanhanapps.appdual.databinding.BottomSheetBatchActionsBinding
+import com.nathanhanapps.appdual.databinding.DialogExportFilenameBinding
+import com.nathanhanapps.appdual.databinding.DialogTappableMessageBinding
+import com.nathanhanapps.appdual.databinding.ItemWorkspaceActionBinding
 import rikka.shizuku.Shizuku
 import java.util.concurrent.Executors
 import androidx.core.view.WindowInsetsControllerCompat
@@ -31,7 +39,7 @@ class MainActivity : AppCompatActivity() {
     // ── Core components ──────────────────────────────────────────────────────
     private lateinit var repo:      AppRepository
     private lateinit var adapter:   AppAdapter
-    private lateinit var shell:     ShellClient
+    private lateinit var shell:     IShellExecutor
     private lateinit var wsRepo:    WorkspaceRepository
     private lateinit var wsAdapter: WorkspaceAdapter
     private lateinit var binding:   ActivityMainBinding
@@ -49,9 +57,45 @@ class MainActivity : AppCompatActivity() {
     private val uiHandler = Handler(Looper.getMainLooper())
     private var showShimmerRunnable: Runnable? = null
 
+    // ── Batch management ─────────────────────────────────────────────────────
+    private var batchDialog: BottomSheetDialog? = null
+    private var pendingExportJson: String? = null
+    private var pendingExportCount: Int = 0
+
+    // Must be registered during construction (before onCreate), per ComponentActivity contract.
+    private val exportDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> if (uri != null) writeExportToUri(uri) else pendingExportJson = null }
+
+    private val importDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { readImportFromUri(it) } }
+
     companion object {
         private const val REQUEST_SHIZUKU_PERMISSION = 1234
         private const val SHIMMER_DELAY_MS = 400L
+
+        // Used to sanity-check that a "clone" selection looks like a full workspace app
+        // list before deleting everything else out of a target workspace. Each inner list
+        // is a set of interchangeable package names satisfying one requirement - AOSP vs.
+        // GMS-flavored builds ship some of these under different names. This no longer
+        // hard-blocks the clone (see showIncompleteSelectionDialog) - it's a warning gate.
+        private val CLONE_REQUIRED_PACKAGE_GROUPS = listOf(
+            listOf("com.android.settings"),
+            listOf("com.android.providers.settings"),
+            listOf("com.android.providers.media", "com.android.providers.media.module")
+        )
+
+        // Reference list shown only after the 5-tap reveal - broader than what's actually
+        // enforced above, for the user's own context on what a "full" workspace app set
+        // typically includes. Deliberately excludes Camera: its package name varies too
+        // much by OEM to be a useful reference, let alone an enforced check.
+        private val CLONE_REFERENCE_PACKAGE_GROUPS = CLONE_REQUIRED_PACKAGE_GROUPS + listOf(
+            listOf("com.android.documentsui"),
+            listOf("com.android.externalstorage"),
+            listOf("com.android.permissioncontroller", "com.google.android.permissioncontroller"),
+            listOf("com.android.packageinstaller", "com.google.android.packageinstaller")
+        )
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -72,11 +116,12 @@ class MainActivity : AppCompatActivity() {
 
         repo = AppRepository(this)
         loadAppsUser0()
-        checkShizukuAndInitialize()
+        initializeExecution()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
+        tintOverflowIcon()
 
         val searchItem = menu.findItem(R.id.action_search)
         val searchView = searchItem.actionView as SearchView
@@ -93,7 +138,28 @@ class MainActivity : AppCompatActivity() {
         // Hide search when switched to Settings
         searchItem.isVisible = binding.layoutAppList.isVisible
 
+        // Selection-shortcut items only make sense in batch mode, on the app list
+        val inBatch = binding.layoutAppList.isVisible && ::adapter.isInitialized && adapter.batchMode
+        menu.findItem(R.id.action_select_all).isVisible = inBatch
+        menu.findItem(R.id.action_invert_selection).isVisible = inBatch
+        menu.findItem(R.id.action_deselect_all).isVisible = inBatch
+
         return true
+    }
+
+    /** Matches the toolbar's "⋮" overflow icon to the bottom nav's (unselected) icon color. */
+    private fun tintOverflowIcon() {
+        val tint = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0)
+        binding.toolbar.overflowIcon?.mutate()?.setTint(tint)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_select_all -> { adapter.selectAll(); true }
+            R.id.action_invert_selection -> { adapter.invertSelection(); true }
+            R.id.action_deselect_all -> { adapter.deselectAll(); true }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
 
@@ -172,6 +238,18 @@ class MainActivity : AppCompatActivity() {
         bg.shutdown()
     }
 
+    /**
+     * Posts to [bg], skipping the task if the activity has already been torn down.
+     * Async chains (e.g. querying packages per workspace) can outlive the activity -
+     * without this guard, the final `bg.execute` throws RejectedExecutionException
+     * once onDestroy() has shut the executor down (easiest to hit with clone
+     * workspaces, whose package lists are large enough to make the query slow).
+     */
+    private fun runBg(task: () -> Unit) {
+        if (bg.isShutdown) return
+        bg.execute(task)
+    }
+
     // ════════════════════════════════════════════════════════════════════════
     //  UI Setup
     // ════════════════════════════════════════════════════════════════════════
@@ -182,7 +260,11 @@ class MainActivity : AppCompatActivity() {
         // ── App list RecyclerView ────────────────────────────────────────────
         val columns = resources.getInteger(R.integer.app_grid_columns)
         binding.rvApps.layoutManager = GridLayoutManager(this, columns)
-        adapter = AppAdapter { item -> showAppActionsBottomSheet(item) }
+        adapter = AppAdapter(
+            onItemClick = { item -> showAppActionsBottomSheet(item) },
+            onLongPress = { item -> enterBatchModeAndSelect(item) },
+            onSelectionChanged = { selected -> updateBatchFab(selected) }
+        )
         binding.rvApps.adapter = adapter
 
         // ── Dual filter chip ─────────────────────────────────────────────────
@@ -245,14 +327,14 @@ class MainActivity : AppCompatActivity() {
 
         // ── Create workspace button ──────────────────────────────────────────
         binding.btnCreateWorkspace.setOnClickListener {
-            if (!requireShizukuOrToast()) return@setOnClickListener
+            if (!requireShellOrToast()) return@setOnClickListener
             val name = wsRepo.suggestName(cachedWorkspaces, "Work")
             doCreateWorkspace(name, "managed")
         }
 
         // ── Create clone workspace button ────────────────────────────────────
         binding.btnCreateCloneWorkspace.setOnClickListener {
-            if (!requireShizukuOrToast()) return@setOnClickListener
+            if (!requireShellOrToast()) return@setOnClickListener
             val name = wsRepo.suggestName(cachedWorkspaces, "Clone")
             doCreateWorkspace(name, "clone")
         }
@@ -260,6 +342,64 @@ class MainActivity : AppCompatActivity() {
         // ── Refresh workspaces button ────────────────────────────────────────
         binding.btnRefreshWorkspaces.setOnClickListener {
             if (::wsRepo.isInitialized) loadWorkspaces()
+        }
+
+        // ── Execution mode (root vs. Shizuku) card ───────────────────────────
+        setupExecutionModeCard()
+
+        // ── Batch management ─────────────────────────────────────────────────
+        binding.chipBatchMode.setOnClickListener {
+            val newMode = !adapter.batchMode
+            adapter.setBatchMode(newMode)
+            binding.chipBatchMode.isChecked = newMode
+            invalidateOptionsMenu()
+        }
+        binding.fabBatchActions.setOnClickListener { showBatchActionsBottomSheet() }
+        // Set in code, not XML: ExtendedFloatingActionButton's default Material3 style
+        // applies its own icon tint via a theme overlay that can outrank a plain
+        // app:iconTint attribute, so only an explicit post-inflation set is reliable.
+        binding.fabBatchActions.iconTint = ColorStateList.valueOf(
+            MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0)
+        )
+    }
+
+    private fun enterBatchModeAndSelect(item: AppItem) {
+        if (!adapter.batchMode) {
+            adapter.setBatchMode(true)
+            binding.chipBatchMode.isChecked = true
+            invalidateOptionsMenu()
+        }
+        adapter.toggleSelection(item.packageName)
+    }
+
+    private fun updateBatchFab(selected: Set<String>) {
+        if (selected.isEmpty()) {
+            binding.fabBatchActions.isVisible = false
+        } else {
+            binding.fabBatchActions.text = getString(R.string.batch_fab_selected, selected.size)
+            binding.fabBatchActions.isVisible = true
+        }
+    }
+
+    private fun setupExecutionModeCard() {
+        binding.switchUseRoot.isChecked = Prefs.useRoot(this)
+        binding.switchUseRoot.setOnCheckedChangeListener { _, checked ->
+            if (Prefs.useRoot(this) == checked) return@setOnCheckedChangeListener
+            Prefs.setUseRoot(this, checked)
+            reinitializeExecution()
+        }
+        refreshRootStatusText()
+    }
+
+    private fun refreshRootStatusText() {
+        binding.tvRootStatus.setText(R.string.root_checking)
+        runBg {
+            val available = RootShellClient.isRootAvailable()
+            runOnUiThread {
+                binding.tvRootStatus.setText(
+                    if (available) R.string.root_detected_yes else R.string.root_detected_no
+                )
+            }
         }
     }
 
@@ -270,7 +410,7 @@ class MainActivity : AppCompatActivity() {
             val appName = getString(R.string.app_name)
             binding.tvAppVersion.text = getString(R.string.app_name_version, appName, version)
         } catch (e: Exception) {
-            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.1")
+            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.4")
         }
     }
 
@@ -295,11 +435,33 @@ class MainActivity : AppCompatActivity() {
     private fun scheduleShowShimmer() {
         cancelShowShimmer()
         showShimmerRunnable = Runnable {
+            populateSkeletonList()
             binding.rvApps.isVisible = false
             binding.shimmerOverlay.isVisible = true
             binding.shimmerOverlay.startShimmer()
         }
         uiHandler.postDelayed(showShimmerRunnable!!, SHIMMER_DELAY_MS)
+    }
+
+    /**
+     * Fills [skeletonList] with just enough placeholder rows to cover the visible area,
+     * computed from the container's actual measured height instead of a fixed count -
+     * a fixed count of 8 left blank space below it on tall screens. Runs once: by the
+     * time this is first called (from the delayed shimmer runnable above) the container
+     * has already been through a layout pass, so its height is reliably non-zero.
+     */
+    private fun populateSkeletonList() {
+        val container = binding.skeletonList
+        if (container.childCount > 0) return
+
+        val containerHeightPx = binding.appsListContainer.height
+        val itemHeightPx = (72 * resources.displayMetrics.density).toInt()
+        if (containerHeightPx <= 0 || itemHeightPx <= 0) return
+
+        val count = containerHeightPx / itemHeightPx + 2 // +2: partial trailing row + safety margin
+        repeat(count) {
+            layoutInflater.inflate(R.layout.item_app_skeleton, container, true)
+        }
     }
 
     private fun hideShimmerNow() {
@@ -370,11 +532,58 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun requireShizukuOrToast(silent: Boolean = false): Boolean {
-        val ok = Shizuku.pingBinder() &&
-                Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED &&
-                ::shell.isInitialized
-        if (!ok && !silent) Toast.makeText(this, getString(R.string.shizuku_required), Toast.LENGTH_SHORT).show()
+    // ════════════════════════════════════════════════════════════════════════
+    //  Execution mode (Shizuku vs. root) selection
+    // ════════════════════════════════════════════════════════════════════════
+
+    private fun initializeExecution() {
+        if (Prefs.useRoot(this)) {
+            initRootShellAndUpdate()
+        } else {
+            checkShizukuAndInitialize()
+        }
+    }
+
+    private fun initRootShellAndUpdate() {
+        if (isInitialized) return
+        runBg {
+            val available = RootShellClient.isRootAvailable()
+            runOnUiThread {
+                if (!available) {
+                    Toast.makeText(this, getString(R.string.root_unavailable), Toast.LENGTH_LONG).show()
+                    Prefs.setUseRoot(this, false)
+                    binding.switchUseRoot.isChecked = false
+                    checkShizukuAndInitialize()
+                    return@runOnUiThread
+                }
+                try {
+                    shell  = RootShellClient(this)
+                    wsRepo = WorkspaceRepository(shell)
+                    isInitialized = true
+                    updateAllWorkspaceStatuses()
+                } catch (e: Exception) {
+                    Toast.makeText(this, getString(R.string.error_initializing, e.message ?: ""), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    /** Tears down whichever backend is active and switches to the other. */
+    private fun reinitializeExecution() {
+        if (::shell.isInitialized) runCatching { shell.unbind() }
+        isInitialized = false
+        initializeExecution()
+    }
+
+    private fun requireShellOrToast(silent: Boolean = false): Boolean {
+        val useRoot = Prefs.useRoot(this)
+        val ok = ::shell.isInitialized && (
+            useRoot || (Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED)
+        )
+        if (!ok && !silent) {
+            val msgRes = if (useRoot) R.string.root_required else R.string.shizuku_required
+            Toast.makeText(this, getString(msgRes), Toast.LENGTH_SHORT).show()
+        }
         return ok
     }
 
@@ -384,7 +593,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadAppsUser0() {
         runOnUiThread { scheduleShowShimmer() }
-        bg.execute {
+        runBg {
             try {
                 val list = repo.loadInstalledAppsUser0(currentFilter)
                 cachedFullList = list
@@ -436,8 +645,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateAllWorkspaceStatuses() {
         if (!::wsRepo.isInitialized) return
-        if (!Shizuku.pingBinder()) return
-        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) return
+        if (!Prefs.useRoot(this) && (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED)) return
 
         wsRepo.listWorkspaces { workspaces ->
             cachedWorkspaces = workspaces
@@ -471,7 +679,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyWorkspaceStatus(installedByUser: Map<Int, Set<String>>) {
-        bg.execute {
+        runBg {
             val updated = cachedFullList.map { item ->
                 val userIds = installedByUser.entries
                     .filter { (_, pkgs) -> pkgs.contains(item.packageName) }
@@ -592,7 +800,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchApp(userId: Int, packageName: String) {
-        if (!requireShizukuOrToast()) return
+        if (!requireShellOrToast()) return
         val component = getLauncherComponent(packageName)
         if (component == null) {
             Toast.makeText(this, getString(R.string.no_launcher_found), Toast.LENGTH_SHORT).show()
@@ -606,7 +814,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openAppInfo(userId: Int, packageName: String) {
-        if (!requireShizukuOrToast()) return
+        if (!requireShellOrToast()) return
         wsRepo.openAppInfoInWorkspace(userId, packageName) { success, output ->
             runOnUiThread {
                 if (!success) Toast.makeText(this, getString(R.string.failed_generic, output), Toast.LENGTH_LONG).show()
@@ -633,10 +841,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Main Space Buttons
-        val shizukuReady = requireShizukuOrToast(silent = true)
+        val shellReady = requireShellOrToast(silent = true)
         with(sheetBinding) {
-            btnLaunchMain.isEnabled = shizukuReady
-            btnAppInfoMain.isEnabled = shizukuReady
+            btnLaunchMain.isEnabled = shellReady
+            btnAppInfoMain.isEnabled = shellReady
             btnLaunchMain.setOnClickListener  { launchApp(0, item.packageName) }
             btnAppInfoMain.setOnClickListener { openAppInfo(0, item.packageName) }
         }
@@ -668,11 +876,10 @@ class MainActivity : AppCompatActivity() {
         var isInstalled = item.installedUserIds.contains(ws.userId)
         val running = ws.isRunning
 
-        row.tvWsActionName.text = buildString {
-            append(ws.displayName)
-            append("  (User ${ws.userId}")
-            if (!running) append(" · ${getString(R.string.stopped)}")
-            append(")")
+        row.tvWsActionName.text = if (running) {
+            getString(R.string.workspace_user_label, ws.displayName, ws.userId)
+        } else {
+            getString(R.string.workspace_user_label_stopped, ws.displayName, ws.userId, getString(R.string.stopped))
         }
 
         fun updateUiState(installed: Boolean) {
@@ -727,6 +934,374 @@ class MainActivity : AppCompatActivity() {
 
         row.btnWsAppInfo.setOnClickListener {
             openAppInfo(ws.userId, item.packageName)
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  Batch management
+    // ════════════════════════════════════════════════════════════════════════
+
+    private fun showBatchActionsBottomSheet() {
+        val selected = adapter.selectedPackages()
+        if (selected.isEmpty()) return
+
+        val sheetBinding = BottomSheetBatchActionsBinding.inflate(layoutInflater)
+        val dialog = BottomSheetDialog(this).apply { setContentView(sheetBinding.root) }
+        batchDialog = dialog
+        dialog.setOnDismissListener { if (batchDialog === dialog) batchDialog = null }
+
+        sheetBinding.tvBatchSelectedCount.text = getString(R.string.batch_selected_count, selected.size)
+
+        val managedWorkspaces = cachedWorkspaces.filter { !it.isMainUser }
+        sheetBinding.tvBatchNoWorkspaces.isVisible = managedWorkspaces.isEmpty()
+        sheetBinding.layoutBatchWorkspaces.removeAllViews()
+
+        val workspaceCheckBoxes = mutableListOf<Pair<Int, MaterialCheckBox>>()
+        managedWorkspaces.forEach { ws ->
+            val cb = layoutInflater.inflate(
+                R.layout.item_workspace_checkbox, sheetBinding.layoutBatchWorkspaces, false
+            ) as MaterialCheckBox
+            cb.text = getString(R.string.workspace_user_label, ws.displayName, ws.userId)
+            sheetBinding.layoutBatchWorkspaces.addView(cb)
+            workspaceCheckBoxes.add(ws.userId to cb)
+        }
+
+        fun selectedWorkspaceIds(): List<Int> =
+            workspaceCheckBoxes.filter { it.second.isChecked }.map { it.first }
+
+        sheetBinding.btnBatchInstall.setOnClickListener {
+            performBatchOperation(install = true, selected.toList(), selectedWorkspaceIds(), sheetBinding)
+        }
+        sheetBinding.btnBatchUninstall.setOnClickListener {
+            performBatchOperation(install = false, selected.toList(), selectedWorkspaceIds(), sheetBinding)
+        }
+        sheetBinding.btnBatchClone.setOnClickListener {
+            confirmAndPerformClone(selected, selectedWorkspaceIds(), sheetBinding)
+        }
+        sheetBinding.btnBatchExport.setOnClickListener { showExportDialog(selected) }
+        sheetBinding.btnBatchImport.setOnClickListener { importDocumentLauncher.launch(arrayOf("*/*")) }
+        sheetBinding.btnBatchCancel.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    private fun setBatchButtonsEnabled(sheetBinding: BottomSheetBatchActionsBinding, enabled: Boolean) {
+        sheetBinding.btnBatchInstall.isEnabled = enabled
+        sheetBinding.btnBatchUninstall.isEnabled = enabled
+        sheetBinding.btnBatchClone.isEnabled = enabled
+        sheetBinding.btnBatchExport.isEnabled = enabled
+        sheetBinding.btnBatchImport.isEnabled = enabled
+    }
+
+    /**
+     * Installs/uninstalls [packages] into each of [workspaceIds]. "Smart": an install is
+     * skipped where the app is already present, an uninstall is skipped where it isn't -
+     * so re-running the same batch op is always a safe no-op for already-settled pairs.
+     * Runtime failures (e.g. Shizuku/ADB refusing to uninstall a protected package) are
+     * folded into the same skip count rather than aborting the batch.
+     */
+    private fun performBatchOperation(
+        install: Boolean,
+        packages: List<String>,
+        workspaceIds: List<Int>,
+        sheetBinding: BottomSheetBatchActionsBinding
+    ) {
+        if (workspaceIds.isEmpty()) {
+            Toast.makeText(this, getString(R.string.batch_no_workspace_selected), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val pkgByName = cachedFullList.associateBy { it.packageName }
+        val jobs = mutableListOf<Pair<String, Int>>() // (packageName, userId)
+        var preSkipped = 0
+        for (pkg in packages) {
+            val installedIn = pkgByName[pkg]?.installedUserIds ?: emptySet()
+            for (uid in workspaceIds) {
+                val alreadyInstalled = uid in installedIn
+                val shouldRun = if (install) !alreadyInstalled else alreadyInstalled
+                if (shouldRun) jobs.add(pkg to uid) else preSkipped++
+            }
+        }
+
+        sheetBinding.layoutBatchProgress.isVisible = true
+        sheetBinding.tvBatchProgressText.setText(if (install) R.string.batch_installing else R.string.batch_uninstalling)
+        setBatchButtonsEnabled(sheetBinding, false)
+
+        fun runJobs() {
+            runBatchJobsSequentially(jobs, 0, install, successCount = 0, skippedCount = preSkipped) { success, skipped ->
+                runOnUiThread {
+                    sheetBinding.layoutBatchProgress.isVisible = false
+                    setBatchButtonsEnabled(sheetBinding, true)
+                    val msg = if (install) getString(R.string.batch_install_summary, success, skipped)
+                              else getString(R.string.batch_uninstall_summary, success, skipped)
+                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                    updateAllWorkspaceStatuses()
+                }
+            }
+        }
+
+        if (install) {
+            // Best-effort: a stopped workspace can't receive installs, so start every target first.
+            startWorkspacesThenRun(workspaceIds) { runJobs() }
+        } else {
+            runJobs()
+        }
+    }
+
+    private fun startWorkspacesThenRun(workspaceIds: List<Int>, onDone: () -> Unit) {
+        fun step(index: Int) {
+            if (index >= workspaceIds.size) {
+                onDone()
+                return
+            }
+            wsRepo.startWorkspace(workspaceIds[index]) { _, _ -> step(index + 1) }
+        }
+        step(0)
+    }
+
+    private fun runBatchJobsSequentially(
+        jobs: List<Pair<String, Int>>,
+        index: Int,
+        install: Boolean,
+        successCount: Int,
+        skippedCount: Int,
+        onDone: (Int, Int) -> Unit
+    ) {
+        if (index >= jobs.size) {
+            onDone(successCount, skippedCount)
+            return
+        }
+        val (pkg, userId) = jobs[index]
+        val callback: (Boolean, String) -> Unit = { success, _ ->
+            val nextSuccess = successCount + if (success) 1 else 0
+            val nextSkipped  = skippedCount + if (success) 0 else 1
+            runBatchJobsSequentially(jobs, index + 1, install, nextSuccess, nextSkipped, onDone)
+        }
+        if (install) {
+            wsRepo.installToWorkspace(userId, pkg, callback)
+        } else {
+            wsRepo.uninstallFromWorkspace(userId, pkg, callback)
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  Batch clone: make target workspace(s) match the selection exactly
+    // ════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Guard against cloning a partial/accidental selection over a whole workspace: a real
+     * "full app list" export always includes a few core system packages, so their absence
+     * is a strong signal the selection is a subset, not a full snapshot. This only warns -
+     * the user can push through via the red "continue anyway" button.
+     */
+    private fun confirmAndPerformClone(
+        packages: Set<String>,
+        workspaceIds: List<Int>,
+        sheetBinding: BottomSheetBatchActionsBinding
+    ) {
+        if (workspaceIds.isEmpty()) {
+            Toast.makeText(this, getString(R.string.batch_no_workspace_selected), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (selectionLooksLikeFullWorkspace(packages)) {
+            showCloneConfirmDialog(packages, workspaceIds, sheetBinding)
+        } else {
+            showIncompleteSelectionDialog { showCloneConfirmDialog(packages, workspaceIds, sheetBinding) }
+        }
+    }
+
+    private fun selectionLooksLikeFullWorkspace(packages: Set<String>): Boolean =
+        CLONE_REQUIRED_PACKAGE_GROUPS.all { group -> group.any { it in packages } }
+
+    private fun showCloneConfirmDialog(
+        packages: Set<String>,
+        workspaceIds: List<Int>,
+        sheetBinding: BottomSheetBatchActionsBinding
+    ) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.clone_confirm_title)
+            .setMessage(R.string.clone_confirm_message)
+            .setPositiveButton(R.string.clone_button) { _, _ -> runCloneOperation(packages, workspaceIds, sheetBinding) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /**
+     * Deliberately doesn't say which packages are being checked up front - showing that
+     * list unprompted would teach anyone probing the warning exactly what to add to slip
+     * past it. Tapping the message once reveals the reference list on demand instead.
+     */
+    private fun showIncompleteSelectionDialog(onContinueAnyway: () -> Unit) {
+        val messageBinding = DialogTappableMessageBinding.inflate(layoutInflater)
+        messageBinding.tvDialogMessage.text = getString(R.string.clone_incomplete_selection_message)
+
+        var revealed = false
+        messageBinding.tvDialogMessage.setOnClickListener {
+            if (revealed) return@setOnClickListener
+            revealed = true
+            val referenceList = CLONE_REFERENCE_PACKAGE_GROUPS.joinToString("\n") { it.joinToString(" / ") }
+            messageBinding.tvDialogMessage.text = getString(R.string.clone_reference_list_prompt, referenceList)
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.clone_incomplete_selection_title)
+            .setView(messageBinding.root)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.continue_anyway) { _, _ -> onContinueAnyway() }
+            .show()
+
+        // Tint the override button red after show() so the button exists in the view tree
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
+            setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_light))
+        }
+    }
+
+    private fun runCloneOperation(
+        packages: Set<String>,
+        workspaceIds: List<Int>,
+        sheetBinding: BottomSheetBatchActionsBinding
+    ) {
+        sheetBinding.layoutBatchProgress.isVisible = true
+        sheetBinding.tvBatchProgressText.setText(R.string.batch_cloning)
+        setBatchButtonsEnabled(sheetBinding, false)
+
+        startWorkspacesThenRun(workspaceIds) {
+            cloneWorkspacesSequentially(workspaceIds, 0, packages, installed = 0, uninstalled = 0, skipped = 0) { i, u, s ->
+                runOnUiThread {
+                    sheetBinding.layoutBatchProgress.isVisible = false
+                    setBatchButtonsEnabled(sheetBinding, true)
+                    Toast.makeText(this, getString(R.string.batch_clone_summary, i, u, s), Toast.LENGTH_LONG).show()
+                    updateAllWorkspaceStatuses()
+                }
+            }
+        }
+    }
+
+    /** Fetches each workspace's actual current package list (not the cached main-space view) to diff correctly. */
+    private fun cloneWorkspacesSequentially(
+        workspaceIds: List<Int>,
+        index: Int,
+        packages: Set<String>,
+        installed: Int,
+        uninstalled: Int,
+        skipped: Int,
+        onDone: (Int, Int, Int) -> Unit
+    ) {
+        if (index >= workspaceIds.size) {
+            onDone(installed, uninstalled, skipped)
+            return
+        }
+        val userId = workspaceIds[index]
+        wsRepo.getInstalledPackages(userId) { currentPkgs ->
+            val jobs = (packages - currentPkgs).map { true to it } +   // install
+                       (currentPkgs - packages).map { false to it }    // uninstall (everything not selected)
+            runCloneJobsSequentially(userId, jobs, 0, installed, uninstalled, skipped) { i, u, s ->
+                cloneWorkspacesSequentially(workspaceIds, index + 1, packages, i, u, s, onDone)
+            }
+        }
+    }
+
+    private fun runCloneJobsSequentially(
+        userId: Int,
+        jobs: List<Pair<Boolean, String>>, // (isInstall, packageName)
+        index: Int,
+        installed: Int,
+        uninstalled: Int,
+        skipped: Int,
+        onDone: (Int, Int, Int) -> Unit
+    ) {
+        if (index >= jobs.size) {
+            onDone(installed, uninstalled, skipped)
+            return
+        }
+        val (isInstall, pkg) = jobs[index]
+        val callback: (Boolean, String) -> Unit = { success, _ ->
+            val (i, u, s) = when {
+                success && isInstall  -> Triple(installed + 1, uninstalled, skipped)
+                success && !isInstall -> Triple(installed, uninstalled + 1, skipped)
+                else                  -> Triple(installed, uninstalled, skipped + 1)
+            }
+            runCloneJobsSequentially(userId, jobs, index + 1, i, u, s, onDone)
+        }
+        if (isInstall) {
+            wsRepo.installToWorkspace(userId, pkg, callback)
+        } else {
+            wsRepo.uninstallFromWorkspace(userId, pkg, callback)
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  Batch list import / export (Storage Access Framework)
+    // ════════════════════════════════════════════════════════════════════════
+
+    private fun showExportDialog(selected: Set<String>) {
+        val dialogBinding = DialogExportFilenameBinding.inflate(layoutInflater)
+        dialogBinding.etExportFileName.setText(PackageListIO.defaultFileName())
+        dialogBinding.etExportFileName.text?.let { dialogBinding.etExportFileName.setSelection(it.length) }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.export_dialog_title)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val typed = dialogBinding.etExportFileName.text?.toString()?.trim()
+                val name = if (typed.isNullOrBlank()) PackageListIO.defaultFileName() else typed
+                pendingExportJson = PackageListIO.serialize(selected)
+                pendingExportCount = selected.size
+                exportDocumentLauncher.launch(name)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun writeExportToUri(uri: Uri) {
+        val json = pendingExportJson
+        val count = pendingExportCount
+        pendingExportJson = null
+        if (json == null) return
+
+        runBg {
+            try {
+                val stream = contentResolver.openOutputStream(uri)
+                    ?: throw IllegalStateException("openOutputStream returned null")
+                stream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                runOnUiThread {
+                    Toast.makeText(this, getString(R.string.batch_export_success, count), Toast.LENGTH_SHORT).show()
+                    batchDialog?.dismiss()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, getString(R.string.batch_export_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun readImportFromUri(uri: Uri) {
+        runBg {
+            try {
+                val stream = contentResolver.openInputStream(uri)
+                    ?: throw IllegalStateException("openInputStream returned null")
+                val text = stream.use { it.bufferedReader().readText() }
+
+                val importedPkgs = PackageListIO.deserialize(text).toSet()
+                val installedOnDevice = cachedFullList.map { it.packageName }.toSet()
+                val matched = importedPkgs.intersect(installedOnDevice)
+                val notFound = importedPkgs.size - matched.size
+
+                runOnUiThread {
+                    adapter.setBatchMode(true)
+                    binding.chipBatchMode.isChecked = true
+                    invalidateOptionsMenu()
+                    adapter.setSelectedPackages(matched)
+                    Toast.makeText(this, getString(R.string.batch_import_success, matched.size, notFound), Toast.LENGTH_LONG).show()
+                    batchDialog?.dismiss()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, getString(R.string.batch_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 }

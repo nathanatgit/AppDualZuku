@@ -415,7 +415,7 @@ class MainActivity : AppCompatActivity() {
             val appName = getString(R.string.app_name)
             binding.tvAppVersion.text = getString(R.string.app_name_version, appName, version)
         } catch (e: Exception) {
-            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.4")
+            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.4.1")
         }
     }
 

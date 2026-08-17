@@ -32,12 +32,9 @@ It allows you to create isolated or shared environments for apps, enabling multi
    (**Note:** Managed space is an isolated environment from main user while cloned space using shared storage. Cloned space may not work in all devices.)
 4. **Batch management:** Long‑press any app (or tap "Batch Manage" in the app list) to enter selection mode, pick apps, then tap the floating button to install/uninstall/clone them across workspaces, or export/import the selection as a list.
 
-## 📸 Screenshots
+## 📸 Screenshots (English UI supported)
 
-<img src="screenshots/01_app_list.png" width="260" alt="App list">
-<img src="screenshots/02_settings.png" width="260" alt="Settings: execution mode and workspaces">
-<img src="screenshots/03_batch_select.png" width="260" alt="Batch selection mode">
-<img src="screenshots/04_batch_actions.png" width="260" alt="Batch actions: install, uninstall, clone, export, import">
+<img src="screenshots/01_app_list.png" width="230" alt="App list"><img src="screenshots/02_settings.png" width="230" alt="Settings: execution mode and workspaces"><img src="screenshots/03_batch_select.png" width="230" alt="Batch selection mode"><img src="screenshots/04_batch_actions.png" width="230" alt="Batch actions: install, uninstall, clone, export, import">
 
 ## ⚖️ License
 

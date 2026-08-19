@@ -1,4 +1,4 @@
-# AppDual
+# AppDual （formerly AppDualZuku with only Shizuku support, now comes with root）
 
 A multi‑instance app manager powered by **Shizuku** or **root**.
 

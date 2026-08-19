@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.chip.Chip
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -22,6 +23,7 @@ import com.nathanhanapps.appdual.databinding.BottomSheetAppActionsBinding
 import com.nathanhanapps.appdual.databinding.BottomSheetBatchActionsBinding
 import com.nathanhanapps.appdual.databinding.DialogExportFilenameBinding
 import com.nathanhanapps.appdual.databinding.DialogTappableMessageBinding
+import com.nathanhanapps.appdual.databinding.DialogWorkspaceNameBinding
 import com.nathanhanapps.appdual.databinding.ItemWorkspaceActionBinding
 import rikka.shizuku.Shizuku
 import java.util.concurrent.Executors
@@ -48,6 +50,12 @@ class MainActivity : AppCompatActivity() {
     // ── State caches ─────────────────────────────────────────────────────────
     private var cachedFullList:   List<AppItem>       = emptyList()
     private var cachedWorkspaces: List<WorkspaceInfo> = emptyList()
+
+    // ── Per-space filter chips ───────────────────────────────────────────────
+    /** Selected workspace userIds for the space filter row. Empty = "All" (no filter). */
+    private var spaceFilterUserIds: Set<Int> = emptySet()
+    /** userIds the chip row was last built for, so we only rebuild when the workspace set changes. */
+    private var chipWorkspaceIds: List<Int> = emptyList()
 
     // ── UI / lifecycle flags ──────────────────────────────────────────────────
     private var isInitialized = false
@@ -268,21 +276,8 @@ class MainActivity : AppCompatActivity() {
         )
         binding.rvApps.adapter = adapter
 
-        // ── Dual filter chip ─────────────────────────────────────────────────
-        val chipDualFilter = binding.chipDualFilter
-        val filterStates = listOf(
-            AppAdapter.DualFilter.ALL       to getString(R.string.filter_all),
-            AppAdapter.DualFilter.DUAL_ONLY to getString(R.string.filter_in_workspace),
-            AppAdapter.DualFilter.MAIN_ONLY to getString(R.string.filter_main_only)
-        )
-        var filterIndex = 0
-        chipDualFilter.setOnClickListener {
-            filterIndex = (filterIndex + 1) % filterStates.size
-            val (filter, label) = filterStates[filterIndex]
-            chipDualFilter.text    = label
-            chipDualFilter.isChecked = filterIndex != 0
-            adapter.setDualFilter(filter)
-        }
+        // ── Per-space filter chips (All / Main / Clone1 / Work1 / …) ────────────
+        rebuildSpaceFilterChips()
 
         // ── Bottom navigation ────────────────────────────────────────────────
         binding.bottomNav.setOnItemSelectedListener { menuItem ->
@@ -326,18 +321,26 @@ class MainActivity : AppCompatActivity() {
         binding.rvWorkspaces.adapter       = wsAdapter
         binding.rvWorkspaces.isNestedScrollingEnabled = false
 
-        // ── Create workspace button ──────────────────────────────────────────
+        // ── Create workspace button (long-press to customize the name) ──────────
         binding.btnCreateWorkspace.setOnClickListener {
             if (!requireShellOrToast()) return@setOnClickListener
             val name = wsRepo.suggestName(cachedWorkspaces, "Work")
             doCreateWorkspace(name, "managed")
         }
+        binding.btnCreateWorkspace.setOnLongClickListener {
+            if (requireShellOrToast()) promptCreateWorkspaceName("managed")
+            true
+        }
 
-        // ── Create clone workspace button ────────────────────────────────────
+        // ── Create clone workspace button (long-press to customize the name) ────
         binding.btnCreateCloneWorkspace.setOnClickListener {
             if (!requireShellOrToast()) return@setOnClickListener
             val name = wsRepo.suggestName(cachedWorkspaces, "Clone")
             doCreateWorkspace(name, "clone")
+        }
+        binding.btnCreateCloneWorkspace.setOnLongClickListener {
+            if (requireShellOrToast()) promptCreateWorkspaceName("clone")
+            true
         }
 
         // ── Refresh workspaces button ────────────────────────────────────────
@@ -362,6 +365,67 @@ class MainActivity : AppCompatActivity() {
         binding.fabBatchActions.iconTint = ColorStateList.valueOf(
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0)
         )
+    }
+
+    // ── Per-space filter chips ───────────────────────────────────────────────
+
+    /** (Re)builds the chip row from [cachedWorkspaces]: "All" plus one chip per space. */
+    private fun rebuildSpaceFilterChips() {
+        val group = binding.chipGroupSpaceFilter
+        group.removeAllViews()
+
+        val allChip = layoutInflater.inflate(R.layout.item_filter_chip, group, false) as Chip
+        allChip.text = getString(R.string.filter_all)
+        allChip.tag = null
+        allChip.setOnClickListener { onSpaceFilterChipClicked(null) }
+        group.addView(allChip)
+
+        for (ws in cachedWorkspaces.sortedBy { it.userId }) {
+            val chip = layoutInflater.inflate(R.layout.item_filter_chip, group, false) as Chip
+            chip.text = if (ws.isMainUser) getString(R.string.main_space) else ws.displayName
+            chip.tag = ws.userId
+            chip.setOnClickListener { onSpaceFilterChipClicked(ws.userId) }
+            group.addView(chip)
+        }
+
+        updateSpaceFilterChipStates()
+    }
+
+    /** Rebuilds the chip row only when the set of known workspaces actually changed. */
+    private fun refreshSpaceFilterChipsIfNeeded() {
+        val ids = cachedWorkspaces.map { it.userId }.sorted()
+        if (ids == chipWorkspaceIds) return
+        chipWorkspaceIds = ids
+        // Drop selections for spaces that no longer exist (e.g. a removed workspace).
+        spaceFilterUserIds = spaceFilterUserIds.intersect(ids.toSet())
+        rebuildSpaceFilterChips()
+        adapter.setWorkspaceFilter(spaceFilterUserIds)
+    }
+
+    /**
+     * Tapping "All" (null) clears the filter. Tapping a space chip toggles it and, if that
+     * empties the selection, falls back to "All" automatically.
+     */
+    private fun onSpaceFilterChipClicked(tappedUserId: Int?) {
+        spaceFilterUserIds = if (tappedUserId == null) {
+            emptySet()
+        } else if (spaceFilterUserIds.contains(tappedUserId)) {
+            spaceFilterUserIds - tappedUserId
+        } else {
+            spaceFilterUserIds + tappedUserId
+        }
+        adapter.setWorkspaceFilter(spaceFilterUserIds)
+        updateSpaceFilterChipStates()
+    }
+
+    private fun updateSpaceFilterChipStates() {
+        val group = binding.chipGroupSpaceFilter
+        for (i in 0 until group.childCount) {
+            val chip = group.getChildAt(i) as Chip
+            val userId = chip.tag as? Int
+            chip.isChecked = if (userId == null) spaceFilterUserIds.isEmpty()
+                              else spaceFilterUserIds.contains(userId)
+        }
     }
 
     private fun enterBatchModeAndSelect(item: AppItem) {
@@ -415,7 +479,7 @@ class MainActivity : AppCompatActivity() {
             val appName = getString(R.string.app_name)
             binding.tvAppVersion.text = getString(R.string.app_name_version, appName, version)
         } catch (e: Exception) {
-            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.4.2")
+            binding.tvAppVersion.text = getString(R.string.app_name_version, getString(R.string.app_name), "1.5")
         }
     }
 
@@ -654,6 +718,7 @@ class MainActivity : AppCompatActivity() {
 
         wsRepo.listWorkspaces { workspaces ->
             cachedWorkspaces = workspaces
+            runOnUiThread { refreshSpaceFilterChipsIfNeeded() }
             val managed = workspaces.filter { !it.isMainUser }
 
             if (managed.isEmpty()) {
@@ -711,8 +776,50 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 wsAdapter.submitList(managed)
                 binding.tvNoWorkspacesInfo.isVisible = managed.isEmpty()
+                refreshSpaceFilterChipsIfNeeded()
             }
         }
+    }
+
+    /** Only these characters are allowed in a user-typed workspace name (defense against
+     *  shell injection: names flow into a raw `sh -c` command in WorkspaceRepository). */
+    private val workspaceNameCharset = Regex("^[\\p{L}\\p{N} _.-]+$")
+
+    private fun promptCreateWorkspaceName(type: String) {
+        val prefix = if (type == "clone") "Clone" else "Work"
+        val suggested = wsRepo.suggestName(cachedWorkspaces, prefix)
+
+        val dialogBinding = DialogWorkspaceNameBinding.inflate(layoutInflater)
+        dialogBinding.etWorkspaceName.setText(suggested)
+        dialogBinding.etWorkspaceName.text?.let { dialogBinding.etWorkspaceName.setSelection(it.length) }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(if (type == "clone") R.string.create_clone_workspace_dialog_title else R.string.create_workspace_dialog_title)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.create, null)
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+
+        // Overriding the click listener after show() lets us keep the dialog open (with an
+        // inline error) instead of dismissing on an invalid name.
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val typed = dialogBinding.etWorkspaceName.text?.toString()?.trim().orEmpty()
+            val error = validateWorkspaceName(typed)
+            if (error != null) {
+                dialogBinding.root.error = error
+            } else {
+                dialog.dismiss()
+                doCreateWorkspace(typed, type)
+            }
+        }
+    }
+
+    private fun validateWorkspaceName(name: String): String? = when {
+        name.isBlank() -> getString(R.string.workspace_name_empty_error)
+        name.length > 24 -> getString(R.string.workspace_name_too_long_error)
+        !workspaceNameCharset.matches(name) -> getString(R.string.workspace_name_invalid_chars_error)
+        cachedWorkspaces.any { it.name.equals(name, ignoreCase = true) } -> getString(R.string.workspace_name_duplicate_error)
+        else -> null
     }
 
     private fun doCreateWorkspace(name: String, type: String) {
@@ -848,8 +955,10 @@ class MainActivity : AppCompatActivity() {
         // Main Space Buttons
         val shellReady = requireShellOrToast(silent = true)
         with(sheetBinding) {
+            btnUninstallMain.isEnabled = shellReady
             btnLaunchMain.isEnabled = shellReady
             btnAppInfoMain.isEnabled = shellReady
+            btnUninstallMain.setOnClickListener { confirmAndUninstallFromMain(item, dialog, sheetBinding) }
             btnLaunchMain.setOnClickListener  { launchApp(0, item.packageName) }
             btnAppInfoMain.setOnClickListener { openAppInfo(0, item.packageName) }
         }
@@ -865,6 +974,47 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    /**
+     * Uninstalling from Main removes the app from AppDual's master list (it's sourced from
+     * Main's own package list - see AppRepository.loadInstalledAppsUser0), even though the
+     * app keeps working in any other space it's still installed in. Warn before doing that
+     * so it isn't a silent surprise; skip the warning when there's nothing to lose.
+     */
+    private fun confirmAndUninstallFromMain(item: AppItem, dialog: BottomSheetDialog, sheetBinding: BottomSheetAppActionsBinding) {
+        if (item.isDual) {
+            val warnDialog = MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.main_uninstall_warning_title)
+                .setMessage(getString(R.string.main_uninstall_warning_message, item.label, item.workspaceCount))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.continue_anyway) { _, _ -> uninstallFromMain(item, dialog, sheetBinding) }
+                .show()
+            warnDialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)?.apply {
+                setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.holo_red_light))
+            }
+        } else {
+            uninstallFromMain(item, dialog, sheetBinding)
+        }
+    }
+
+    private fun uninstallFromMain(item: AppItem, dialog: BottomSheetDialog, sheetBinding: BottomSheetAppActionsBinding) {
+        sheetBinding.layoutProgress.isVisible = true
+        sheetBinding.tvProgressText.text = getString(R.string.uninstall)
+        sheetBinding.btnUninstallMain.isEnabled = false
+
+        wsRepo.uninstallFromWorkspace(0, item.packageName, sheetBinding.cbKeepData.isChecked) { success, msg ->
+            runOnUiThread {
+                sheetBinding.layoutProgress.isVisible = false
+                if (success) {
+                    dialog.dismiss()
+                    loadAppsUser0()
+                } else {
+                    sheetBinding.btnUninstallMain.isEnabled = true
+                    Toast.makeText(this, getString(R.string.failed_generic, msg), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     /**
@@ -923,7 +1073,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (isInstalled) {
-                wsRepo.uninstallFromWorkspace(ws.userId, item.packageName, callback)
+                wsRepo.uninstallFromWorkspace(ws.userId, item.packageName, sheetBinding.cbKeepData.isChecked, callback)
             } else {
                 if (!running) {
                     wsRepo.startWorkspace(ws.userId) { _, _ ->
@@ -1116,7 +1266,7 @@ class MainActivity : AppCompatActivity() {
         if (install) {
             wsRepo.installToWorkspace(userId, pkg, callback)
         } else {
-            wsRepo.uninstallFromWorkspace(userId, pkg, callback)
+            wsRepo.uninstallFromWorkspace(userId, pkg, sheetBinding.cbBatchKeepData.isChecked, callback)
         }
     }
 
@@ -1280,7 +1430,7 @@ class MainActivity : AppCompatActivity() {
         if (job.isInstall) {
             wsRepo.installToWorkspace(job.userId, job.packageName, callback)
         } else {
-            wsRepo.uninstallFromWorkspace(job.userId, job.packageName, callback)
+            wsRepo.uninstallFromWorkspace(job.userId, job.packageName, sheetBinding.cbBatchKeepData.isChecked, callback)
         }
     }
 

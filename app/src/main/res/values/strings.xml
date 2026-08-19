@@ -22,6 +22,14 @@
     <string name="create_workspace">Managed</string>
     <string name="create_clone_workspace">Cloned</string>
     <string name="refresh">Refresh</string>
+    <string name="create_workspace_dialog_title">New Managed Workspace</string>
+    <string name="create_clone_workspace_dialog_title">New Cloned Workspace</string>
+    <string name="workspace_name_hint">Workspace name</string>
+    <string name="create">Create</string>
+    <string name="workspace_name_empty_error">Name can\'t be empty</string>
+    <string name="workspace_name_too_long_error">Name is too long (max 24 characters)</string>
+    <string name="workspace_name_invalid_chars_error">Only letters, numbers, spaces, - and _ are allowed</string>
+    <string name="workspace_name_duplicate_error">That name is already in use</string>
     <string name="no_workspaces_info">No managed workspaces yet.\nTap "Create Workspace" to add one.</string>
     <string name="remove_workspace_title">Remove Workspace</string>
     <string name="remove_workspace_confirm">Remove "%1$s" (User %2$d)?\n\nAll apps and data in this workspace will be permanently deleted.</string>
@@ -41,6 +49,9 @@
     <string name="info">Info</string>
     <string name="remove">Remove</string>
     <string name="stopped">Stopped</string>
+    <string name="keep_app_data">Uninstall keeping app data</string>
+    <string name="main_uninstall_warning_title">Still Installed Elsewhere</string>
+    <string name="main_uninstall_warning_message">%1$s is still installed in %2$d other space(s). Uninstalling it from Main will remove it from this list, but it will keep working there - you won\'t be able to manage it from AppDual anymore unless you reinstall it to Main.</string>
 
     <!-- Common -->
     <string name="cancel">Cancel</string>
@@ -81,9 +92,7 @@
 
     <!-- Filters -->
     <string name="filter_all">All</string>
-    <string name="filter_in_workspace">In workspace</string>
     <string name="filter_user">User</string>
-    <string name="filter_main_only">Main only</string>
 
     <!-- Toasts and Errors -->
     <string name="error_initializing">Error initializing: %1$s</string>

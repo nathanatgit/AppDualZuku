@@ -18,11 +18,11 @@ class AppAdapter(
     private val onSelectionChanged: (Set<String>) -> Unit
 ) : ListAdapter<AppItem, AppAdapter.VH>(DIFF) {
 
-    enum class DualFilter { ALL, DUAL_ONLY, MAIN_ONLY }
-
     private var fullList: List<AppItem> = emptyList()
     private var currentQuery = ""
-    private var dualFilter = DualFilter.ALL
+
+    /** Selected workspace userIds to filter by (userId 0 = Main). Empty = no filter ("All"). */
+    private var spaceFilter: Set<Int> = emptySet()
 
     var batchMode: Boolean = false
         private set
@@ -86,8 +86,9 @@ class AppAdapter(
         applyFilters()
     }
 
-    fun setDualFilter(f: DualFilter) {
-        dualFilter = f
+    /** Sets which workspace(s) apps must belong to. Empty set clears the filter ("All"). */
+    fun setWorkspaceFilter(userIds: Set<Int>) {
+        spaceFilter = userIds
         applyFilters()
     }
 
@@ -101,10 +102,12 @@ class AppAdapter(
             }
         }
 
-        result = when (dualFilter) {
-            DualFilter.DUAL_ONLY -> result.filter { it.isDual }
-            DualFilter.MAIN_ONLY -> result.filter { !it.isDual }
-            DualFilter.ALL       -> result
+        if (spaceFilter.isNotEmpty()) {
+            // Every item in fullList originates from the main user's (userId 0) package
+            // list, so it's always "installed" on Main by construction.
+            result = result.filter { item ->
+                spaceFilter.any { uid -> uid == 0 || item.installedUserIds.contains(uid) }
+            }
         }
 
         submitList(result)

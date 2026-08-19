@@ -26,6 +26,15 @@
             android:layout_marginTop="12dp"
             android:layout_marginBottom="12dp" />
 
+        <!-- ── Options (applies to Uninstall and Clone below) ──────────── -->
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/cbBatchKeepData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/keep_app_data"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
         <!-- ── Target spaces section ─────────────────────────────────── -->
         <TextView
             android:layout_width="wrap_content"

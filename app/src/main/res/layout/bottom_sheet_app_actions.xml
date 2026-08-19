@@ -57,6 +57,15 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp" />
 
+        <!-- ── Options (apply to every uninstall action below, Main included) ── -->
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/cbKeepData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/keep_app_data"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
         <!-- ── Main space section ─────────────────────────────────────── -->
         <TextView
             android:layout_width="wrap_content"
@@ -72,6 +81,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUninstallMain"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/uninstall"
+                app:icon="@android:drawable/ic_menu_delete"
+                style="@style/Widget.Material3.Button.TonalButton" />
+
+            <Space android:layout_width="8dp" android:layout_height="1dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLaunchMain"

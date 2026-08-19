@@ -62,8 +62,9 @@ class WorkspaceRepository(private val shell: IShellExecutor) {
         }
     }
 
-    fun uninstallFromWorkspace(userId: Int, packageName: String, callback: (Boolean, String) -> Unit) {
-        shell.execWhenReady("pm uninstall --user $userId $packageName") { out ->
+    fun uninstallFromWorkspace(userId: Int, packageName: String, keepData: Boolean, callback: (Boolean, String) -> Unit) {
+        val keepFlag = if (keepData) "-k " else ""
+        shell.execWhenReady("pm uninstall $keepFlag--user $userId $packageName") { out ->
             callback(out.contains("Success", ignoreCase = true), out)
         }
     }

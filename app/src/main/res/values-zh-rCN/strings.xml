@@ -8,6 +8,9 @@
     <string name="shizuku_required">需要 Shizuku 权限！</string>
     <string name="remove">移除</string>
     <string name="stopped">已停止</string>
+    <string name="keep_app_data">卸载时保留应用数据</string>
+    <string name="main_uninstall_warning_title">该应用在仍安装在其他空间</string>
+    <string name="main_uninstall_warning_message">%1$s 仍安装在其他 %2$d 个空间中。从主空间卸载后，它将从此列表中移除，但在其他空间中仍可正常使用。除非重新安装到主空间，否则您将无法在 AppDual 中管理它。</string>
     <string name="cancel">取消</string>
     <string name="processing">正在处理</string>
     <string name="all_apps">所有应用</string>
@@ -22,6 +25,14 @@
     <string name="create_workspace">工作空间</string>
     <string name="create_clone_workspace">分身空间</string>
     <string name="refresh">刷新</string>
+    <string name="create_workspace_dialog_title">新建工作空间</string>
+    <string name="create_clone_workspace_dialog_title">新建分身空间</string>
+    <string name="workspace_name_hint">空间名称</string>
+    <string name="create">创建</string>
+    <string name="workspace_name_empty_error">名称不能为空</string>
+    <string name="workspace_name_too_long_error">名称过长（最多 24 个字符）</string>
+    <string name="workspace_name_invalid_chars_error">仅支持字母、数字、空格、- 和 _</string>
+    <string name="workspace_name_duplicate_error">该名称已被使用</string>
     <string name="no_workspaces_info">暂无工作空间</string>
     <string name="remove_workspace_title">移除工作空间</string>
     <string name="remove_workspace_confirm">确定删除 %1$s（用户 %2$d）吗？用户内所有的应用及数据都将被删除！</string>
@@ -48,9 +59,7 @@
     <string name="dev_remaining_taps">再按%1$d次解锁 Shell 终端</string>
     <string name="dev_no_output">（无输出）</string>
     <string name="filter_all">所有</string>
-    <string name="filter_in_workspace">在工作空间</string>
     <string name="filter_user">用户</string>
-    <string name="filter_main_only">仅主空间</string>
     <string name="filter_system">系统</string>
     <string name="all">全部</string>
     <string name="app_title_format">AppDual\n%1$s应用：%2$d · 工作空间应用：%3$d</string>
